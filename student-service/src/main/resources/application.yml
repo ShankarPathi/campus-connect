@@ -1,0 +1,27 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: student-service
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
+
+# Actuator: expose health (+ info) for the AC and ops probes.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+# springdoc / Swagger UI at /swagger-ui.html
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

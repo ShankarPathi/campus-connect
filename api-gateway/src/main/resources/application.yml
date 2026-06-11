@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: student-service
+              uri: ${STUDENT_SERVICE_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/student/**
+            - id: recruiter-service
+              uri: ${RECRUITER_SERVICE_URI:http://localhost:8082}
+              predicates:
+                - Path=/api/recruiter/**
+            - id: admin-service
+              uri: ${ADMIN_SERVICE_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/admin/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
