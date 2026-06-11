@@ -36,6 +36,9 @@
              - springdoc 3.0.x supports Boot 4 (2.8.x is Boot 3-only). -->
         <spring-cloud.version>2025.1.1</spring-cloud.version>
         <springdoc.version>3.0.3</springdoc.version>
+        <!-- Spring Boot 4.0.x does NOT manage Testcontainers — pin its BOM ourselves.
+             The mongodb/junit-jupiter modules ship on the 1.21.x line (core 2.0.x has no such modules yet). -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencyManagement>
@@ -53,6 +56,14 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
+            </dependency>
+            <!-- Testcontainers BOM (not managed by Spring Boot 4) -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

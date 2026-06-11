@@ -7,6 +7,8 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
+      # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
+      auto-index-creation: true
 
 # Actuator: expose health (+ info) for the AC and ops probes.
 management:
