@@ -39,6 +39,8 @@
         <!-- Spring Boot 4.0.x does NOT manage Testcontainers — pin its BOM ourselves.
              The mongodb/junit-jupiter modules ship on the 1.21.x line (core 2.0.x has no such modules yet). -->
         <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- jjwt (JWT) is third-party, not managed by the Spring Boot BOM — pin it. -->
+        <jjwt.version>0.13.0</jjwt.version>
     </properties>
 
     <dependencyManagement>
