@@ -1,13 +1,17 @@
 package com.campusconnect.student.platform;
 
+import com.campusconnect.common.domain.AccountStatus;
 import com.campusconnect.common.domain.Season;
+import com.campusconnect.common.domain.StudentProfile;
 import com.campusconnect.common.domain.Tenant;
 import com.campusconnect.common.domain.TenantStatus;
 import com.campusconnect.common.domain.User;
+import com.campusconnect.common.repository.StudentProfileRepository;
 import com.campusconnect.common.repository.TenantRepository;
 import com.campusconnect.common.repository.UserRepository;
 import com.campusconnect.common.security.JwtService;
 import com.campusconnect.common.security.Role;
+import com.campusconnect.common.tenancy.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +35,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -68,6 +75,8 @@ class CrossTenantIsolationTest {
     @Autowired
     UserRepository userRepository;
     @Autowired
+    StudentProfileRepository studentProfileRepository;
+    @Autowired
     MongoTemplate mongoTemplate;
 
     MockMvc mockMvc;
@@ -78,6 +87,7 @@ class CrossTenantIsolationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), Tenant.class);
+        mongoTemplate.remove(new Query(), StudentProfile.class);
     }
 
     @Test
@@ -132,7 +142,70 @@ class CrossTenantIsolationTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    void studentInTenantB_cannotSeeTenantAsProfile_throughTheEndpoint() throws Exception {
+        String tenantA = createTenant("alpha");
+        String tenantB = createTenant("beta");
+        String studentA = seedActiveStudent(tenantA, "a@alpha.edu");
+        String studentB = seedActiveStudent(tenantB, "b@beta.edu");
+
+        // Student A builds a full profile through the real authenticated endpoint
+        mockMvc.perform(put("/api/student/profile")
+                        .header(HttpHeaders.AUTHORIZATION, studentToken(studentA, tenantA))
+                        .contentType(MediaType.APPLICATION_JSON).content(fullProfileJson("CSE", "2026")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completionPercent").value(100));
+
+        // ISOLATION (the negative assertion): an ACTIVE student in tenant B, hitting the SAME endpoint,
+        // only ever gets their own empty draft — never tenant A's data.
+        mockMvc.perform(get("/api/student/profile")
+                        .header(HttpHeaders.AUTHORIZATION, studentToken(studentB, tenantB)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileApprovalStatus").value("DRAFT"))
+                .andExpect(jsonPath("$.data.completionPercent").value(0))
+                .andExpect(jsonPath("$.data.rollNumber").doesNotExist());
+
+        // Mechanism cross-check: A's profile is visible only under tenant A's scope, never tenant B's.
+        runInTenant(tenantB, () -> assertThat(studentProfileRepository.findByStudentId(studentA)).isEmpty());
+        runInTenant(tenantA, () -> assertThat(studentProfileRepository.findByStudentId(studentA)).isPresent());
+        // genuinely partitioned: exactly one profile exists, and it belongs to tenant A
+        assertThat(mongoTemplate.findAll(StudentProfile.class)).hasSize(1);
+    }
+
     // ── helpers ──
+
+    private String seedActiveStudent(String tenantId, String email) {
+        User u = new User();
+        u.setTenantId(tenantId);
+        u.setEmail(email.toLowerCase());
+        u.setPasswordHash("hash");
+        u.setRole(Role.STUDENT);
+        u.setAccountStatus(AccountStatus.ACTIVE); // ACTIVE so the Story 2.5 status gate admits the request
+        return userRepository.save(u).getId();
+    }
+
+    private String studentToken(String userId, String tenantId) {
+        return "Bearer " + jwtService.issueAccessToken(userId, Role.STUDENT, tenantId);
+    }
+
+    private String fullProfileJson(String branch, String batch) throws Exception {
+        return objectMapper.writeValueAsString(java.util.Map.of(
+                "personal", java.util.Map.of("fullName", "Asha Rao", "phone", "9990001234"),
+                "academic", java.util.Map.of("branch", branch, "cgpa", 8.1, "activeBacklogs", 0),
+                "placement", java.util.Map.of("skills", List.of("Java")),
+                "rollNumber", "21CS001",
+                "batch", batch));
+    }
+
+    /** Runs an action with the given tenant bound to the context (cleared in a finally). */
+    private void runInTenant(String tenantId, Runnable action) {
+        try {
+            TenantContext.set(tenantId, "tester", Role.STUDENT.name());
+            action.run();
+        } finally {
+            TenantContext.clear();
+        }
+    }
 
     private void bootstrapAdmin(String tenantId, String email) throws Exception {
         mockMvc.perform(post("/api/platform/tenants/{tenantId}/admins", tenantId)

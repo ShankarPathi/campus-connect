@@ -41,6 +41,7 @@ public enum ErrorCode {
     OTP_EXPIRED(HttpStatus.BAD_REQUEST),
 
     // ── profile (Epic 3) ──
+    PROFILE_INCOMPLETE(HttpStatus.BAD_REQUEST),
     PROFILE_NOT_APPROVED(HttpStatus.FORBIDDEN),
     PROFILE_LOCKED(HttpStatus.CONFLICT),
     RESUME_INVALID_TYPE(HttpStatus.BAD_REQUEST),
