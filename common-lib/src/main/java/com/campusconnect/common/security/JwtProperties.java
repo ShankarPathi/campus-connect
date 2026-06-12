@@ -9,12 +9,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *                                env in production; never hardcode a real secret.
  * @param accessTokenMinutes      access-token lifetime for non-admin roles (default 30).
  * @param adminAccessTokenMinutes access-token lifetime for admin roles (default 15, architecture §11).
+ * @param refreshTokenDays        refresh-token (session) lifetime in days (default 7, Story 2.3).
  */
 @ConfigurationProperties(prefix = "security.jwt")
 public record JwtProperties(
         String secret,
         Integer accessTokenMinutes,
-        Integer adminAccessTokenMinutes) {
+        Integer adminAccessTokenMinutes,
+        Integer refreshTokenDays) {
 
     public JwtProperties {
         if (accessTokenMinutes == null) {
@@ -22,6 +24,9 @@ public record JwtProperties(
         }
         if (adminAccessTokenMinutes == null) {
             adminAccessTokenMinutes = 15;
+        }
+        if (refreshTokenDays == null) {
+            refreshTokenDays = 7;
         }
     }
 

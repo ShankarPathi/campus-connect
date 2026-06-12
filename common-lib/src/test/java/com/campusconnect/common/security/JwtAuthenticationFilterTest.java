@@ -23,7 +23,7 @@ class JwtAuthenticationFilterTest {
 
     private static final String SECRET = "test-secret-0123456789-0123456789-abcd";
 
-    private final JwtService jwtService = new JwtService(new JwtProperties(SECRET, 30, 15));
+    private final JwtService jwtService = new JwtService(new JwtProperties(SECRET, 30, 15, 7));
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, objectMapper);
 

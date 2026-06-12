@@ -18,7 +18,7 @@ class JwtServiceTest {
     private static final String SECRET = "test-secret-0123456789-0123456789-abcd"; // >= 32 bytes
 
     private JwtService service(int accessMinutes, int adminMinutes) {
-        return new JwtService(new JwtProperties(SECRET, accessMinutes, adminMinutes));
+        return new JwtService(new JwtProperties(SECRET, accessMinutes, adminMinutes, 7));
     }
 
     @Test
@@ -65,21 +65,21 @@ class JwtServiceTest {
     void wrongSecret_isRejected() {
         String token = service(30, 15).issueAccessToken("user-1", Role.STUDENT, "tenant-a");
         JwtService other = new JwtService(
-                new JwtProperties("different-secret-0123456789-0123456789-xyz", 30, 15));
+                new JwtProperties("different-secret-0123456789-0123456789-xyz", 30, 15, 7));
 
         assertThatThrownBy(() -> other.parse(token)).isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void shortSecret_failsFastAtConstruction() {
-        assertThatThrownBy(() -> new JwtService(new JwtProperties("too-short", 30, 15)))
+        assertThatThrownBy(() -> new JwtService(new JwtProperties("too-short", 30, 15, 7)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("at least 32 bytes");
     }
 
     @Test
     void adminRolesGetShorterLifetimeThanNonAdmin() {
-        JwtProperties props = new JwtProperties(SECRET, 30, 15);
+        JwtProperties props = new JwtProperties(SECRET, 30, 15, 7);
 
         assertThat(props.minutesFor(Role.PLATFORM_ADMIN)).isEqualTo(15);
         assertThat(props.minutesFor(Role.COLLEGE_ADMIN)).isEqualTo(15);
