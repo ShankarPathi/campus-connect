@@ -13,6 +13,11 @@ spring:
               uri: ${STUDENT_SERVICE_URI:http://localhost:8081}
               predicates:
                 - Path=/api/student/**
+            # Platform-admin provisioning APIs are hosted in student-service (architecture §3).
+            - id: platform-apis
+              uri: ${STUDENT_SERVICE_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/platform/**
             - id: recruiter-service
               uri: ${RECRUITER_SERVICE_URI:http://localhost:8082}
               predicates:

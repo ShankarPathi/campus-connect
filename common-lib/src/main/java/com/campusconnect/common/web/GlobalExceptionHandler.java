@@ -61,6 +61,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(ErrorCode.VALIDATION_ERROR.status()).body(ApiResponse.error(error));
     }
 
+    /**
+     * Authorization denials thrown by method security ({@code @PreAuthorize}) reach the advice (not the
+     * filter chain's access-denied handler), so map them to a 403 envelope here. Without this, the
+     * catch-all below would turn them into 500s.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        ApiError error = ApiError.of(ErrorCode.FORBIDDEN.name(), "Access denied");
+        return ResponseEntity.status(ErrorCode.FORBIDDEN.status()).body(ApiResponse.error(error));
+    }
+
+    /**
+     * A unique-index violation (e.g. a TOCTOU race past an existence pre-check) → 409. Generic
+     * message — the DB error detail is never returned.
+     */
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    public ResponseEntity<Object> handleDuplicateKey(org.springframework.dao.DuplicateKeyException ex) {
+        log.warn("Unique constraint violation", ex);
+        ApiError error = ApiError.of(ErrorCode.CONFLICT.name(), "A resource with the same unique key already exists");
+        return ResponseEntity.status(ErrorCode.CONFLICT.status()).body(ApiResponse.error(error));
+    }
+
     /** Anything unmapped (non-Spring, non-business) → 500 generic; real cause logged, never returned. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleUnexpected(Exception ex) {

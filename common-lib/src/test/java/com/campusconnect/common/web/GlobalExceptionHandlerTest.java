@@ -164,6 +164,21 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void accessDenied_maps403NotFiveHundred() throws Exception {
+        mockMvc.perform(get("/t/access-denied"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void duplicateKey_maps409AndDoesNotLeakDbError() throws Exception {
+        mockMvc.perform(get("/t/dup-key"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("CONFLICT"))
+                .andExpect(content().string(not(containsString("E11000"))));
+    }
+
+    @Test
     void constraintViolation_maps400WithLeafFieldName() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         Set<ConstraintViolation<Account>> violations = validator.validate(new Account(""));
@@ -247,6 +262,18 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/boom")
         void boom() {
             throw new RuntimeException("internal detail must not leak");
+        }
+
+        @GetMapping("/access-denied")
+        void accessDenied() {
+            // simulates a @PreAuthorize denial reaching the advice (not the filter)
+            throw new org.springframework.security.access.AccessDeniedException("denied");
+        }
+
+        @GetMapping("/dup-key")
+        void dupKey() {
+            // simulates a unique-index violation (e.g. a TOCTOU race) surfacing from the data layer
+            throw new org.springframework.dao.DuplicateKeyException("E11000 duplicate key error: slug");
         }
     }
 }
