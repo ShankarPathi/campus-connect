@@ -1,7 +1,10 @@
 package com.campusconnect.student.platform;
 
+import com.campusconnect.common.domain.AccountStatus;
 import com.campusconnect.common.domain.Tenant;
+import com.campusconnect.common.domain.User;
 import com.campusconnect.common.repository.TenantRepository;
+import com.campusconnect.common.repository.UserRepository;
 import com.campusconnect.common.security.JwtService;
 import com.campusconnect.common.security.Role;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,6 +58,8 @@ class TenantProvisioningTest {
     @Autowired
     TenantRepository tenantRepository;
     @Autowired
+    UserRepository userRepository;
+    @Autowired
     MongoTemplate mongoTemplate;
 
     MockMvc mockMvc;
@@ -67,6 +72,21 @@ class TenantProvisioningTest {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         mongoTemplate.remove(new Query(), Tenant.class);
+        mongoTemplate.remove(new Query(), User.class);
+        // Story 2.5: the STUDENT token used by nonPlatformAdmin_isForbidden403 needs a real ACTIVE row so
+        // the per-request status gate passes and the rejection comes from @PreAuthorize (ROLE), not the gate.
+        seedActiveUser("student-1", Role.STUDENT, "tenant-x");
+    }
+
+    private void seedActiveUser(String id, Role role, String tenantId) {
+        User u = new User();
+        u.setId(id);
+        u.setTenantId(tenantId);
+        u.setEmail(id + "@seed.test");
+        u.setPasswordHash("hash");
+        u.setRole(role);
+        u.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(u);
     }
 
     @Test

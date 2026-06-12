@@ -32,7 +32,17 @@ public final class TenantContext {
         return h != null ? h.tenantId() : null;
     }
 
-    /** The current user id, or {@code null} if none is bound. */
+    /**
+     * The current user id (the authenticated principal), or {@code null} if none is bound.
+     *
+     * <p><b>Ownership convention (Story 2.5, enforced per-resource in Epics 3/5/6):</b> tenant isolation
+     * is automatic — every read/write through {@code TenantAwareRepository} is scoped to
+     * {@link #requireTenantId()}. <i>Per-resource ownership</i> (a recruiter acting only on its own
+     * drives, a student only on its own profile/applications) is enforced in the service layer by
+     * comparing the resource's owner field ({@code studentId}/{@code recruiterId}/{@code createdBy}) to
+     * this {@code getUserId()} and rejecting cross-owner access. It is added where each resource's
+     * endpoints are introduced; Story 2.5 establishes the convention, not the per-resource checks.
+     */
     public static String getUserId() {
         Holder h = CONTEXT.get();
         return h != null ? h.userId() : null;

@@ -59,6 +59,9 @@ class RecruiterPasswordTest {
     static void mongoProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("spring.data.mongodb.auto-index-creation", () -> "true");
+        // Story 2.5: raise the rate limits far above any test so the shared RateLimiter never trips here.
+        registry.add("app.ratelimit.login.limit", () -> "100000");
+        registry.add("app.ratelimit.otp.limit", () -> "100000");
     }
 
     @TestConfiguration

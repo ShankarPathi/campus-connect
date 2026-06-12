@@ -111,6 +111,21 @@ class RecruiterApprovalTest {
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), RecruiterProfile.class);
         email.clear();
+        // Story 2.5: the per-request status gate loads the token's user. Seed the principals the tokens
+        // reference as ACTIVE: the acting admin, and the student used by the wrong-role (403 FORBIDDEN) case.
+        seedActiveUser("admin-1", Role.COLLEGE_ADMIN, TENANT);
+        seedActiveUser("stud-1", Role.STUDENT, TENANT);
+    }
+
+    private void seedActiveUser(String id, Role role, String tenantId) {
+        User u = new User();
+        u.setId(id);
+        u.setTenantId(tenantId);
+        u.setEmail(id + "@seed.test");
+        u.setPasswordHash("hash");
+        u.setRole(role);
+        u.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(u);
     }
 
     @Test
@@ -195,7 +210,9 @@ class RecruiterApprovalTest {
         mockMvc.perform(post("/api/admin/recruiters/{id}/approve", userId)
                         .header(HttpHeaders.AUTHORIZATION,
                                 "Bearer " + jwtService.issueAccessToken("stud-1", Role.STUDENT, TENANT)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                // an ACTIVE-but-wrong-role user is rejected by ROLE — the status gate must NOT mask this as ACCOUNT_INACTIVE
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
     }
 
     @Test

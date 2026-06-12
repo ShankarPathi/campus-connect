@@ -1,5 +1,6 @@
 package com.campusconnect.common.security;
 
+import com.campusconnect.common.repository.UserRepository;
 import com.campusconnect.common.web.ApiError;
 import com.campusconnect.common.web.ApiResponse;
 import com.campusconnect.common.web.ErrorCode;
@@ -53,8 +54,9 @@ public class SecurityConfig {
 
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
-        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtService, objectMapper);
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService,
+                                                   UserRepository userRepository) throws Exception {
+        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtService, objectMapper, userRepository);
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

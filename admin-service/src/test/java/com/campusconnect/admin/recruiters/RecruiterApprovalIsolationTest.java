@@ -90,6 +90,20 @@ class RecruiterApprovalIsolationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), RecruiterProfile.class);
+        // Story 2.5: the acting admin's token is status-checked per request — seed it ACTIVE. Its tenant
+        // is "tenant-a" (the admin acting in every case); cross-tenant denial is still enforced by context.
+        seedActiveUser("admin-1", Role.COLLEGE_ADMIN, "tenant-a");
+    }
+
+    private void seedActiveUser(String id, Role role, String tenantId) {
+        User u = new User();
+        u.setId(id);
+        u.setTenantId(tenantId);
+        u.setEmail(id + "@seed.test");
+        u.setPasswordHash("hash");
+        u.setRole(role);
+        u.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(u);
     }
 
     @Test

@@ -9,6 +9,8 @@ import com.campusconnect.common.auth.RefreshResponse;
 import com.campusconnect.common.auth.ResetPasswordRequest;
 import com.campusconnect.common.security.Role;
 import com.campusconnect.common.web.ApiResponse;
+import com.campusconnect.common.web.ClientIp;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -39,8 +41,9 @@ public class AdminAuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return authEndpoints.login(request, Role.COLLEGE_ADMIN, COOKIE_PATH);
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request,
+                                                            HttpServletRequest httpRequest) {
+        return authEndpoints.login(request, Role.COLLEGE_ADMIN, COOKIE_PATH, ClientIp.from(httpRequest));
     }
 
     @PostMapping("/password/forgot")

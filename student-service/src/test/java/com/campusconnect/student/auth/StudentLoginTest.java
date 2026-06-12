@@ -49,6 +49,11 @@ class StudentLoginTest {
     static void mongoProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("spring.data.mongodb.auto-index-creation", () -> "true");
+        // Story 2.5: this class makes many login calls from one IP across methods in a shared context;
+        // raise the limits far above any test so the shared RateLimiter never trips here. Throttling itself
+        // is proven by RateLimiterTest and the dedicated throttle tests.
+        registry.add("app.ratelimit.login.limit", () -> "100000");
+        registry.add("app.ratelimit.otp.limit", () -> "100000");
     }
 
     @Autowired

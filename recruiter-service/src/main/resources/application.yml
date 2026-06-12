@@ -19,6 +19,14 @@ app:
   verification:
     base-url: ${VERIFY_BASE_URL:http://localhost:8082/api/recruiter/auth/verify-email}
     token-ttl: ${VERIFY_TOKEN_TTL:PT24H}
+  # Auth abuse throttling (Story 2.5, NFR-2): in-memory per-instance fixed-window limits.
+  ratelimit:
+    login:
+      limit: ${RATELIMIT_LOGIN_LIMIT:5}
+      window: ${RATELIMIT_LOGIN_WINDOW:PT15M}
+    otp:
+      limit: ${RATELIMIT_OTP_LIMIT:3}
+      window: ${RATELIMIT_OTP_WINDOW:PT1H}
 
 management:
   endpoints:

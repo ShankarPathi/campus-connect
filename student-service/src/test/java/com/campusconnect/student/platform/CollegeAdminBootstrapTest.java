@@ -75,6 +75,21 @@ class CollegeAdminBootstrapTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), Tenant.class);
+        // Story 2.5: the per-request status gate loads the token's user. The PLATFORM_ADMIN token is
+        // skipped, but the STUDENT token used by nonPlatformAdmin_isForbidden403 needs a real ACTIVE row
+        // so the request reaches @PreAuthorize and is rejected by ROLE, not masked as ACCOUNT_INACTIVE.
+        seedActiveUser("student-1", Role.STUDENT, "tenant-x");
+    }
+
+    private void seedActiveUser(String id, Role role, String tenantId) {
+        User u = new User();
+        u.setId(id);
+        u.setTenantId(tenantId);
+        u.setEmail(id + "@seed.test");
+        u.setPasswordHash("hash");
+        u.setRole(role);
+        u.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(u);
     }
 
     @Test

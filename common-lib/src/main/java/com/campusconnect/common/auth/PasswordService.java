@@ -3,6 +3,7 @@ package com.campusconnect.common.auth;
 import com.campusconnect.common.domain.PasswordResetOtp;
 import com.campusconnect.common.domain.User;
 import com.campusconnect.common.exception.BusinessException;
+import com.campusconnect.common.ratelimit.RateLimiter;
 import com.campusconnect.common.repository.PasswordResetOtpRepository;
 import com.campusconnect.common.repository.RefreshTokenRepository;
 import com.campusconnect.common.repository.TenantRepository;
@@ -23,9 +24,10 @@ import java.util.Optional;
 /**
  * Password reset (via emailed OTP) and authenticated change (Story 2.4, FR-5). Shared by every portal.
  * Both reset and change invalidate all of the user's refresh-token sessions (the 2.3 {@code deleteByUserId}
- * primitive). The OTP is single-use, expiring, and attempt-limited per code — but the per-OTP attempt lock
- * is only a speed-bump: it resets when a new OTP is requested, so genuine brute-force protection REQUIRES
- * the {@code forgot}/OTP request rate-limit of Story 2.5 (tracked in deferred-work as security-critical).
+ * primitive). The OTP is single-use, expiring, and attempt-limited per code. The per-OTP attempt lock is
+ * only a speed-bump (it resets when a new OTP is requested), so genuine brute-force protection comes from
+ * the per-email {@code forgot}/OTP request rate-limit added in Story 2.5 (configured via
+ * {@code app.ratelimit.otp.*}, default 3/hour), applied before the user lookup to stay anti-enumeration.
  */
 @Service
 public class PasswordService {
@@ -40,8 +42,11 @@ public class PasswordService {
     private final PasswordResetOtpRepository otpRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final com.campusconnect.common.email.EmailService emailService;
+    private final RateLimiter rateLimiter;
     private final Duration otpTtl;
     private final int maxAttempts;
+    private final int otpRequestLimit;
+    private final Duration otpRequestWindow;
 
     public PasswordService(
             TenantRepository tenantRepository,
@@ -50,16 +55,22 @@ public class PasswordService {
             PasswordResetOtpRepository otpRepository,
             RefreshTokenRepository refreshTokenRepository,
             com.campusconnect.common.email.EmailService emailService,
+            RateLimiter rateLimiter,
             @Value("${app.auth.otp-ttl:PT10M}") Duration otpTtl,
-            @Value("${app.auth.otp-max-attempts:5}") int maxAttempts) {
+            @Value("${app.auth.otp-max-attempts:5}") int maxAttempts,
+            @Value("${app.ratelimit.otp.limit:3}") int otpRequestLimit,
+            @Value("${app.ratelimit.otp.window:PT1H}") Duration otpRequestWindow) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.otpRepository = otpRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.emailService = emailService;
+        this.rateLimiter = rateLimiter;
         this.otpTtl = otpTtl;
         this.maxAttempts = maxAttempts;
+        this.otpRequestLimit = otpRequestLimit;
+        this.otpRequestWindow = otpRequestWindow;
     }
 
     /**
@@ -68,6 +79,9 @@ public class PasswordService {
      */
     public void requestReset(String collegeCode, String email) {
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        // Throttle BEFORE the user lookup so a 429 is identical whether or not the account exists
+        // (anti-enumeration). This is the security-critical brute-force bound deferred from Story 2.4.
+        rateLimiter.check("otp:" + normalizedEmail, otpRequestLimit, otpRequestWindow);
         Optional<User> maybeUser = tenantRepository.findBySlug(collegeCode)
                 .flatMap(t -> userRepository.findByTenantIdAndEmail(t.getId(), normalizedEmail));
         if (maybeUser.isEmpty()) {

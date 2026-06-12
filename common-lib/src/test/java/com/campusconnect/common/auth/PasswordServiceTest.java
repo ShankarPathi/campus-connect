@@ -8,6 +8,7 @@ import com.campusconnect.common.domain.TenantStatus;
 import com.campusconnect.common.domain.User;
 import com.campusconnect.common.email.EmailService;
 import com.campusconnect.common.exception.BusinessException;
+import com.campusconnect.common.ratelimit.RateLimiter;
 import com.campusconnect.common.repository.AbstractMongoIT;
 import com.campusconnect.common.repository.PasswordResetOtpRepository;
 import com.campusconnect.common.repository.RefreshTokenRepository;
@@ -65,8 +66,11 @@ class PasswordServiceTest extends AbstractMongoIT {
         otpRepository = new PasswordResetOtpRepository(mongoTemplate);
         refreshTokenRepository = new RefreshTokenRepository(mongoTemplate);
         email = new RecordingEmail();
+        // Generous request-limit (100/hr) so these OTP-logic tests are not coupled to the 2.5 throttle;
+        // the throttle itself is covered by RateLimiterTest and the HTTP-layer throttle tests.
         service = new PasswordService(tenantRepository, userRepository, passwordEncoder, otpRepository,
-                refreshTokenRepository, email, Duration.ofMinutes(10), 5);
+                refreshTokenRepository, email, new RateLimiter(), Duration.ofMinutes(10), 5,
+                100, Duration.ofHours(1));
 
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), Tenant.class);
