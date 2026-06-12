@@ -1,0 +1,52 @@
+# Campus Connect CI — builds the reactor and runs the full test suite, including the
+# CrossTenantIsolationTest (NFR-1 isolation gate) and the repository-level TenantAwareRepositoryTest.
+# A failing test fails the build, so a cross-tenant leak can never merge.
+#
+# Note: GitHub runners have a clean environment (no corporate Maven mirror), so `./mvnw` resolves
+# from public Maven Central via the committed wrapper — no `-s settings.xml` is needed here (that
+# override is only for the local corporate-mirror machine). ubuntu-latest provides Docker, which
+# Testcontainers needs to start a real MongoDB.
+#
+# Out of scope here (Story 10.2 / Epic 10): SonarQube coverage gate, image build/publish to ghcr.io,
+# frontend (Angular) build, and deployment.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & test (isolation gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and run the full test suite (incl. CrossTenantIsolationTest)
+        run: ./mvnw -B clean verify
+
+      # A "mandatory gate" must fail the build if it didn't actually run. Assert the isolation test's
+      # Surefire report exists and reports zero failures/errors — so a future @Disabled / exclusion
+      # can never leave CI green with the gate silently skipped.
+      - name: Assert the tenant-isolation gate executed and passed
+        run: |
+          report=student-service/target/surefire-reports/com.campusconnect.student.platform.CrossTenantIsolationTest.txt
+          if [ ! -f "$report" ]; then
+            echo "::error::CrossTenantIsolationTest did not run — the NFR-1 isolation gate is missing."
+            exit 1
+          fi
+          if ! grep -q "Failures: 0, Errors: 0" "$report"; then
+            echo "::error::CrossTenantIsolationTest reported failures/errors."
+            exit 1
+          fi
+          echo "Tenant-isolation gate executed and passed."
