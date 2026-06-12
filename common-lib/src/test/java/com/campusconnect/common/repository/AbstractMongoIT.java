@@ -25,7 +25,7 @@ import java.util.List;
  * {@code auto-index-creation}), so the unique-index behaviour is genuinely exercised.
  */
 @Testcontainers
-abstract class AbstractMongoIT {
+public abstract class AbstractMongoIT {
 
     @Container
     static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");

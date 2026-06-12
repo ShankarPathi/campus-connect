@@ -9,6 +9,16 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
+  # Email (Story 2.1): dev target is Mailpit (localhost:1025, no auth). Brevo SMTP is wired in Epic 10.
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+
+# Email-verification link sent to registrants. token-ttl controls how long a link stays valid.
+app:
+  verification:
+    base-url: ${VERIFY_BASE_URL:http://localhost:8081/api/student/auth/verify-email}
+    token-ttl: ${VERIFY_TOKEN_TTL:PT24H}
 
 # Actuator: expose health (+ info) for the AC and ops probes.
 management:

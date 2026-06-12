@@ -68,6 +68,15 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Email (Story 2.1): JavaMailSender for verification emails. Shared here so both
+             student-service (registration) and recruiter-service (Story 2.2) reuse one EmailService.
+             Dev target is Mailpit (localhost:1025); Brevo SMTP is wired in Epic 10. The async
+             outbox + retry is Epic 8 — this story sends inline. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Security foundation (Story 1.4): every service authenticates via JWT. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

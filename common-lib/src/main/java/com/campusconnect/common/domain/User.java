@@ -17,7 +17,6 @@ public class User extends TenantAwareDocument {
     private String passwordHash;
     private Role role;
     private AccountStatus accountStatus;
-    private String emailVerifyToken;
 
     public String getEmail() {
         return email;
@@ -49,13 +48,5 @@ public class User extends TenantAwareDocument {
 
     public void setAccountStatus(AccountStatus accountStatus) {
         this.accountStatus = accountStatus;
-    }
-
-    public String getEmailVerifyToken() {
-        return emailVerifyToken;
-    }
-
-    public void setEmailVerifyToken(String emailVerifyToken) {
-        this.emailVerifyToken = emailVerifyToken;
     }
 }

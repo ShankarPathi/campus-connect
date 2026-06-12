@@ -38,6 +38,11 @@ public class UserRepository {
         return Optional.ofNullable(mongoTemplate.findById(id, User.class));
     }
 
+    /** Remove a user by id. Used to roll back a registration whose verification email failed to send. */
+    public void deleteById(String id) {
+        mongoTemplate.remove(new Query(Criteria.where("_id").is(id)), User.class);
+    }
+
     public Optional<User> findByTenantIdAndEmail(String tenantId, String email) {
         return Optional.ofNullable(mongoTemplate.findOne(byTenantAndEmail(tenantId, email), User.class));
     }
