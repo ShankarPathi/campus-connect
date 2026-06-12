@@ -1,9 +1,12 @@
 package com.campusconnect.recruiter.auth;
 
 import com.campusconnect.common.auth.AuthEndpoints;
+import com.campusconnect.common.auth.ForgotPasswordRequest;
 import com.campusconnect.common.auth.LoginRequest;
 import com.campusconnect.common.auth.LoginResponse;
+import com.campusconnect.common.auth.PasswordService;
 import com.campusconnect.common.auth.RefreshResponse;
+import com.campusconnect.common.auth.ResetPasswordRequest;
 import com.campusconnect.common.security.Role;
 import com.campusconnect.common.web.ApiResponse;
 import jakarta.validation.Valid;
@@ -30,10 +33,25 @@ public class RecruiterAuthController {
 
     private final RecruiterRegistrationService registrationService;
     private final AuthEndpoints authEndpoints;
+    private final PasswordService passwordService;
 
-    public RecruiterAuthController(RecruiterRegistrationService registrationService, AuthEndpoints authEndpoints) {
+    public RecruiterAuthController(RecruiterRegistrationService registrationService,
+                                   AuthEndpoints authEndpoints, PasswordService passwordService) {
         this.registrationService = registrationService;
         this.authEndpoints = authEndpoints;
+        this.passwordService = passwordService;
+    }
+
+    @PostMapping("/password/forgot")
+    public ResponseEntity<ApiResponse<Boolean>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordService.requestReset(request.collegeCode(), request.email());
+        return ResponseEntity.ok(ApiResponse.ok(Boolean.TRUE, "If an account exists, a reset code has been sent."));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponse<Boolean>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordService.resetPassword(request.collegeCode(), request.email(), request.otp(), request.newPassword());
+        return ResponseEntity.ok(ApiResponse.ok(Boolean.TRUE, "Password reset — please log in with your new password."));
     }
 
     @PostMapping("/login")

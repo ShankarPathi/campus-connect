@@ -1,9 +1,12 @@
 package com.campusconnect.admin.auth;
 
 import com.campusconnect.common.auth.AuthEndpoints;
+import com.campusconnect.common.auth.ForgotPasswordRequest;
 import com.campusconnect.common.auth.LoginRequest;
 import com.campusconnect.common.auth.LoginResponse;
+import com.campusconnect.common.auth.PasswordService;
 import com.campusconnect.common.auth.RefreshResponse;
+import com.campusconnect.common.auth.ResetPasswordRequest;
 import com.campusconnect.common.security.Role;
 import com.campusconnect.common.web.ApiResponse;
 import jakarta.validation.Valid;
@@ -28,14 +31,28 @@ public class AdminAuthController {
     private static final String COOKIE_PATH = "/api/admin/auth";
 
     private final AuthEndpoints authEndpoints;
+    private final PasswordService passwordService;
 
-    public AdminAuthController(AuthEndpoints authEndpoints) {
+    public AdminAuthController(AuthEndpoints authEndpoints, PasswordService passwordService) {
         this.authEndpoints = authEndpoints;
+        this.passwordService = passwordService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         return authEndpoints.login(request, Role.COLLEGE_ADMIN, COOKIE_PATH);
+    }
+
+    @PostMapping("/password/forgot")
+    public ResponseEntity<ApiResponse<Boolean>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordService.requestReset(request.collegeCode(), request.email());
+        return ResponseEntity.ok(ApiResponse.ok(Boolean.TRUE, "If an account exists, a reset code has been sent."));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponse<Boolean>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordService.resetPassword(request.collegeCode(), request.email(), request.otp(), request.newPassword());
+        return ResponseEntity.ok(ApiResponse.ok(Boolean.TRUE, "Password reset — please log in with your new password."));
     }
 
     @PostMapping("/refresh")

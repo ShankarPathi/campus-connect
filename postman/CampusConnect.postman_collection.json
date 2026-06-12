@@ -1,0 +1,501 @@
+{
+  "info": {
+    "name": "Campus Connect \u2014 Epic 1+2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Full flow: bootstrap college -> student register/verify/login -> recruiter register/verify -> admin approve -> recruiter login. Services run directly on 8081/8082/8083. Check emails at http://localhost:8025 (Mailpit)."
+  },
+  "item": [
+    {
+      "name": "1 \u00b7 Bootstrap (platform admin)",
+      "item": [
+        {
+          "name": "Create college",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{platformToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{studentBase}}/api/platform/tenants"
+            },
+            "description": "Creates the tenant. Captures tenantId + collegeSlug.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vignan College\",\n  \"slug\": \"{{collegeSlug}}\",\n  \"branches\": [\n    \"CSE\",\n    \"ECE\"\n  ],\n  \"batches\": [\n    \"2026\"\n  ],\n  \"seasonStart\": \"2026-06-01\",\n  \"seasonEnd\": \"2026-12-31\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('tenantId', d.id);",
+                  "pm.collectionVariables.set('collegeSlug', d.slug);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bootstrap college admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{platformToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{studentBase}}/api/platform/tenants/{{tenantId}}/admins"
+            },
+            "description": "Creates an ACTIVE COLLEGE_ADMIN (TPO) for the tenant.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 \u00b7 Student",
+      "item": [
+        {
+          "name": "Register student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{studentBase}}/api/student/auth/register"
+            },
+            "description": "201 + sends a verification email to Mailpit (http://localhost:8025).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collegeCode\": \"{{collegeSlug}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get verify token from Mailpit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mailpit}}/api/v1/messages?limit=1"
+            },
+            "description": "Reads the verification link out of Mailpit and stores studentVerifyToken."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const mp = pm.collectionVariables.get('mailpit');",
+                  "pm.sendRequest(mp + '/api/v1/search?query=' + encodeURIComponent('to:' + pm.collectionVariables.get('studentEmail')) + '&limit=1', (e, r) => {",
+                  "  const msgs = r.json().messages; if (!msgs || !msgs.length) { console.log('no mail'); return; }",
+                  "  pm.sendRequest(mp + '/api/v1/message/' + msgs[0].ID, (e2, r2) => {",
+                  "    const m = (r2.json().Text || '').match(/token=([^\\s&\"<]+)/);",
+                  "    if (m) { pm.collectionVariables.set('studentVerifyToken', m[1]); console.log('token set'); }",
+                  "    else console.log('no token in mail');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{studentBase}}/api/student/auth/verify-email?token={{studentVerifyToken}}"
+            },
+            "description": "Activates the student account."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{studentBase}}/api/student/auth/login"
+            },
+            "description": "200 + access token (body) + refresh cookie (Postman keeps it for refresh/logout).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collegeCode\": \"{{collegeSlug}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('studentAccess', d.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{studentBase}}/api/student/auth/refresh"
+            },
+            "description": "Uses the refresh cookie Postman stored; rotates it and returns a new access token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{studentBase}}/api/student/auth/logout"
+            },
+            "description": "Invalidates the refresh token + clears the cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 \u00b7 Recruiter",
+      "item": [
+        {
+          "name": "Register recruiter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{recruiterBase}}/api/recruiter/auth/register"
+            },
+            "description": "201 + verification email to Mailpit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collegeCode\": \"{{collegeSlug}}\",\n  \"email\": \"{{recruiterEmail}}\",\n  \"password\": \"{{recruiterPassword}}\",\n  \"companyName\": \"Acme Corp\",\n  \"companyWebsite\": \"https://acme.example\",\n  \"industry\": \"Software\",\n  \"companyDescription\": \"We build things.\",\n  \"recruiterDesignation\": \"HR Manager\",\n  \"contactPhone\": \"9999999999\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get verify token from Mailpit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mailpit}}/api/v1/messages?limit=1"
+            },
+            "description": "Stores recruiterVerifyToken from the email."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const mp = pm.collectionVariables.get('mailpit');",
+                  "pm.sendRequest(mp + '/api/v1/search?query=' + encodeURIComponent('to:' + pm.collectionVariables.get('recruiterEmail')) + '&limit=1', (e, r) => {",
+                  "  const msgs = r.json().messages; if (!msgs || !msgs.length) { console.log('no mail'); return; }",
+                  "  pm.sendRequest(mp + '/api/v1/message/' + msgs[0].ID, (e2, r2) => {",
+                  "    const m = (r2.json().Text || '').match(/token=([^\\s&\"<]+)/);",
+                  "    if (m) { pm.collectionVariables.set('recruiterVerifyToken', m[1]); console.log('token set'); }",
+                  "    else console.log('no token in mail');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{recruiterBase}}/api/recruiter/auth/verify-email?token={{recruiterVerifyToken}}"
+            },
+            "description": "Moves the recruiter to PENDING_APPROVAL (NOT active)."
+          }
+        },
+        {
+          "name": "Login before approval (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{recruiterBase}}/api/recruiter/auth/login"
+            },
+            "description": "Expect 403 RECRUITER_NOT_APPROVED until the admin approves.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collegeCode\": \"{{collegeSlug}}\",\n  \"email\": \"{{recruiterEmail}}\",\n  \"password\": \"{{recruiterPassword}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 \u00b7 Admin approves recruiter",
+      "item": [
+        {
+          "name": "Admin login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{adminBase}}/api/admin/auth/login"
+            },
+            "description": "COLLEGE_ADMIN login (15-min token).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collegeCode\": \"{{collegeSlug}}\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('adminAccess', d.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List pending recruiters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccess}}"
+              }
+            ],
+            "url": {
+              "raw": "{{adminBase}}/api/admin/recruiters?status=PENDING_APPROVAL"
+            },
+            "description": "Tenant-scoped queue; captures the first recruiter's userId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "if (d && d.length) pm.collectionVariables.set('recruiterUserId', d[0].userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve recruiter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccess}}"
+              }
+            ],
+            "url": {
+              "raw": "{{adminBase}}/api/admin/recruiters/{{recruiterUserId}}/approve"
+            },
+            "description": "Recruiter -> ACTIVE + approval email."
+          }
+        },
+        {
+          "name": "Reject recruiter (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccess}}"
+              }
+            ],
+            "url": {
+              "raw": "{{adminBase}}/api/admin/recruiters/{{recruiterUserId}}/reject"
+            },
+            "description": "Alternative to approve: recruiter -> REJECTED + reason email. (Run only one of approve/reject.)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Company could not be verified.\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 \u00b7 Recruiter after approval",
+      "item": [
+        {
+          "name": "Recruiter login (now 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{recruiterBase}}/api/recruiter/auth/login"
+            },
+            "description": "After approval, login succeeds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collegeCode\": \"{{collegeSlug}}\",\n  \"email\": \"{{recruiterEmail}}\",\n  \"password\": \"{{recruiterPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('recruiterAccess', d.accessToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "studentBase",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "recruiterBase",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "adminBase",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "mailpit",
+      "value": "http://localhost:8025"
+    },
+    {
+      "key": "platformToken",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwbGF0Zm9ybS1hZG1pbiIsInJvbGUiOiJQTEFURk9STV9BRE1JTiIsImlhdCI6MTc4MTI4NjI4OCwiZXhwIjoxNzgzODc4Mjg4fQ.0g7JIakNuoaBPN3I4a0UnQjCTPPM6ypUK_dbZMybrBg"
+    },
+    {
+      "key": "collegeSlug",
+      "value": "vignan"
+    },
+    {
+      "key": "tenantId",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "tpo@vignan.edu"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin@12345"
+    },
+    {
+      "key": "studentEmail",
+      "value": "student@vignan.edu"
+    },
+    {
+      "key": "studentPassword",
+      "value": "Student@123"
+    },
+    {
+      "key": "recruiterEmail",
+      "value": "hr@acme.com"
+    },
+    {
+      "key": "recruiterPassword",
+      "value": "Recruit@123"
+    },
+    {
+      "key": "recruiterUserId",
+      "value": ""
+    },
+    {
+      "key": "studentVerifyToken",
+      "value": ""
+    },
+    {
+      "key": "recruiterVerifyToken",
+      "value": ""
+    },
+    {
+      "key": "studentAccess",
+      "value": ""
+    },
+    {
+      "key": "adminAccess",
+      "value": ""
+    },
+    {
+      "key": "recruiterAccess",
+      "value": ""
+    }
+  ]
+}
