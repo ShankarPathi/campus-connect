@@ -17,6 +17,8 @@ public class User extends TenantAwareDocument {
     private String passwordHash;
     private Role role;
     private AccountStatus accountStatus;
+    /** Set only when a COLLEGE_ADMIN rejects a recruiter (Story 2.2); null otherwise. */
+    private String rejectionReason;
 
     public String getEmail() {
         return email;
@@ -48,5 +50,13 @@ public class User extends TenantAwareDocument {
 
     public void setAccountStatus(AccountStatus accountStatus) {
         this.accountStatus = accountStatus;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

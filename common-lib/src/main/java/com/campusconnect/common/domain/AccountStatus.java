@@ -5,5 +5,6 @@ public enum AccountStatus {
     PENDING_VERIFICATION,
     ACTIVE,
     PENDING_APPROVAL,
+    REJECTED,
     DEACTIVATED
 }

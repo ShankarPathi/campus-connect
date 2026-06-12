@@ -14,4 +14,10 @@ public interface EmailService {
      * @param verificationLink the absolute link that activates the account when opened
      */
     void sendVerificationEmail(String toEmail, String verificationLink);
+
+    /**
+     * Send a plain-text transactional email. The generic primitive (Story 2.2 approval/rejection
+     * notices use it); Epic 8 later routes this through the async outbox.
+     */
+    void sendEmail(String to, String subject, String body);
 }

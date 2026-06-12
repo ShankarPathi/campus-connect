@@ -9,6 +9,10 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
+  # Email (Story 2.2): activates SmtpEmailService so approval/rejection notices are sent (Mailpit in dev).
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
 
 management:
   endpoints:

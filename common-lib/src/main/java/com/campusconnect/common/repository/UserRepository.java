@@ -1,12 +1,15 @@
 package com.campusconnect.common.repository;
 
+import com.campusconnect.common.domain.AccountStatus;
 import com.campusconnect.common.domain.User;
+import com.campusconnect.common.security.Role;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -49,6 +52,14 @@ public class UserRepository {
 
     public boolean existsByTenantIdAndEmail(String tenantId, String email) {
         return mongoTemplate.exists(byTenantAndEmail(tenantId, email), User.class);
+    }
+
+    /** Users of a given role + status within one tenant — backs the admin's pending-recruiter queue. */
+    public List<User> findByTenantIdAndRoleAndAccountStatus(String tenantId, Role role, AccountStatus status) {
+        Query query = new Query(Criteria.where("tenantId").is(tenantId)
+                .and("role").is(role)
+                .and("accountStatus").is(status));
+        return mongoTemplate.find(query, User.class);
     }
 
     private static Query byTenantAndEmail(String tenantId, String email) {

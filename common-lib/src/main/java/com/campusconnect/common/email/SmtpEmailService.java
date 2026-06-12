@@ -31,11 +31,7 @@ public class SmtpEmailService implements EmailService {
 
     @Override
     public void sendVerificationEmail(String toEmail, String verificationLink) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(FROM);
-        message.setTo(toEmail);
-        message.setSubject(SUBJECT);
-        message.setText("""
+        sendEmail(toEmail, SUBJECT, """
                 Welcome to Campus Connect!
 
                 Please verify your email address by opening the link below:
@@ -44,6 +40,15 @@ public class SmtpEmailService implements EmailService {
 
                 This link expires in 24 hours. If you did not create an account, ignore this email.
                 """.formatted(verificationLink));
+    }
+
+    @Override
+    public void sendEmail(String to, String subject, String body) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(FROM);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(body);
         mailSender.send(message);
     }
 }
