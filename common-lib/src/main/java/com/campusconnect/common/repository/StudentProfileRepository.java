@@ -5,8 +5,10 @@ import com.campusconnect.common.domain.StudentProfile;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,5 +34,16 @@ public class StudentProfileRepository extends TenantAwareRepository<StudentProfi
     /** The current tenant's profiles in a given approval status — backs the admin review queue (Story 3.3). */
     public List<StudentProfile> findByApprovalStatus(ProfileApprovalStatus status) {
         return find(new Query(Criteria.where("profileApprovalStatus").is(status)));
+    }
+
+    /**
+     * Sets {@code isLocked} on <b>every</b> profile in the current tenant in one update (Story 3.4 season
+     * lock/unlock). Built on the base {@link #tenantCriteria()} so it can never cross tenants. Touches only
+     * {@code isLocked} (and {@code updatedAt}) — {@code profileApprovalStatus} is left untouched (approval ≠
+     * lock). Returns the number of profiles modified, for the audit row.
+     */
+    public long setLockedForTenant(boolean locked) {
+        Update update = Update.update("isLocked", locked).set("updatedAt", Instant.now());
+        return mongoTemplate.updateMulti(new Query(tenantCriteria()), update, type).getModifiedCount();
     }
 }

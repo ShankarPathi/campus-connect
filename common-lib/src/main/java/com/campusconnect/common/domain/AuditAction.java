@@ -7,5 +7,7 @@ package com.campusconnect.common.domain;
 public enum AuditAction {
     PROFILE_APPROVED,
     PROFILE_REJECTED,
-    PROFILE_EDITED
+    PROFILE_EDITED,
+    PROFILE_LOCKED,
+    PROFILE_UNLOCKED
 }

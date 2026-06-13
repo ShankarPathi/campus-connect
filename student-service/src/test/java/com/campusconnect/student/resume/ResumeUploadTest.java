@@ -3,6 +3,7 @@ package com.campusconnect.student.resume;
 import com.campusconnect.common.domain.AccountStatus;
 import com.campusconnect.common.domain.Resume;
 import com.campusconnect.common.domain.Season;
+import com.campusconnect.common.domain.StudentProfile;
 import com.campusconnect.common.domain.Tenant;
 import com.campusconnect.common.domain.TenantStatus;
 import com.campusconnect.common.domain.User;
@@ -81,6 +82,7 @@ class ResumeUploadTest {
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), Tenant.class);
         mongoTemplate.remove(new Query(), Resume.class);
+        mongoTemplate.remove(new Query(), StudentProfile.class);
         tenantId = seedTenant("vignan");
         studentId = seedUser(tenantId, "s@v.edu", Role.STUDENT, AccountStatus.ACTIVE);
     }
@@ -161,6 +163,27 @@ class ResumeUploadTest {
                 .andExpect(jsonPath("$.data.previewUrl").doesNotExist());
     }
 
+    // ── season edit-lock (Story 3.4) ──
+
+    @Test
+    void upload_whenProfileLocked_is409ProfileLocked() throws Exception {
+        seedProfile(true);
+        mockMvc.perform(multipart("/api/student/resume").file(pdf("resume.pdf", TINY_PDF))
+                        .header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_LOCKED"));
+        assertThat(mongoTemplate.findAll(Resume.class)).isEmpty(); // nothing stored
+    }
+
+    @Test
+    void upload_whenProfileUnlocked_stillWorks() throws Exception {
+        seedProfile(false); // a profile exists but is not frozen → upload proceeds (regression)
+        mockMvc.perform(multipart("/api/student/resume").file(pdf("resume.pdf", TINY_PDF))
+                        .header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.version").value(1));
+    }
+
     // ── authz ──
 
     @Test
@@ -194,6 +217,15 @@ class ResumeUploadTest {
 
     private MockMultipartFile pdf(String name, byte[] bytes) {
         return new MockMultipartFile("file", name, "application/pdf", bytes);
+    }
+
+    /** Seeds a minimal profile for the test student, locked or not (Story 3.4 résumé-lock cases). */
+    private void seedProfile(boolean locked) {
+        StudentProfile p = new StudentProfile();
+        p.setTenantId(tenantId);
+        p.setStudentId(studentId);
+        p.setLocked(locked);
+        mongoTemplate.save(p);
     }
 
     private String token(String userId, Role role) {

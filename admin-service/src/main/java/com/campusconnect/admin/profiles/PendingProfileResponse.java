@@ -16,7 +16,8 @@ public record PendingProfileResponse(
         Integer activeBacklogs,
         String batch,
         int completionPercent,
-        ProfileApprovalStatus profileApprovalStatus) {
+        ProfileApprovalStatus profileApprovalStatus,
+        boolean isLocked) {
 
     public static PendingProfileResponse of(StudentProfile p) {
         return new PendingProfileResponse(
@@ -28,6 +29,7 @@ public record PendingProfileResponse(
                 p.getAcademic().getActiveBacklogs(),
                 p.getBatch(),
                 p.getCompletionPercent(),
-                p.getProfileApprovalStatus());
+                p.getProfileApprovalStatus(),
+                p.isLocked());
     }
 }

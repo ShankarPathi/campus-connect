@@ -127,6 +127,22 @@ class ProfileApprovalIsolationTest {
                 .andExpect(jsonPath("$.data.length()").value(0)); // tenant A has none; B's is invisible
     }
 
+    @Test
+    void adminOfTenantA_seasonLock_flipsOnlyTenantAsProfiles() throws Exception {
+        seedProfile("tenant-a", "alice", ProfileApprovalStatus.APPROVED); // a tenant-A profile to flip
+
+        mockMvc.perform(post("/api/admin/profiles/lock").header(HttpHeaders.AUTHORIZATION, adminTokenA()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(1)); // only tenant A's single profile
+
+        assertThat(profile("alice").isLocked()).isTrue();
+        assertThat(profile("bob").isLocked()).isFalse(); // tenant B untouched
+        // the lone audit row belongs to tenant A, never tenant B
+        List<AuditLog> logs = mongoTemplate.findAll(AuditLog.class);
+        assertThat(logs).hasSize(1);
+        assertThat(logs.get(0).getTenantId()).isEqualTo("tenant-a");
+    }
+
     // ── helpers ──
 
     private String adminTokenA() {

@@ -224,6 +224,53 @@ class StudentProfileTest {
                 .andExpect(jsonPath("$.data.completionPercent").value(100));
     }
 
+    // ── season edit-lock (Story 3.4): independent of approval ──
+
+    @Test
+    void edit_whenLocked_is409ProfileLocked_evenWhenApproved() throws Exception {
+        seedLockedProfile(ProfileApprovalStatus.APPROVED); // locked + APPROVED → lock wins over status
+        mockMvc.perform(put("/api/student/profile").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(fullProfile("ECE", "2027"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_LOCKED"));
+    }
+
+    @Test
+    void submit_whenLocked_is409ProfileLocked() throws Exception {
+        seedLockedProfile(ProfileApprovalStatus.REJECTED); // editable status, but frozen by the lock
+        mockMvc.perform(post("/api/student/profile/submit").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_LOCKED"));
+    }
+
+    @Test
+    void getProfile_whenLocked_exposesIsLocked_andStatusUnchanged() throws Exception {
+        seedLockedProfile(ProfileApprovalStatus.APPROVED);
+        mockMvc.perform(get("/api/student/profile").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isLocked").value(true))
+                .andExpect(jsonPath("$.data.profileApprovalStatus").value("APPROVED")); // two independent fields
+    }
+
+    @Test
+    void edit_whenLockedDraft_is409ProfileLocked() throws Exception {
+        // DRAFT is an editable status, so here the lock is the SOLE blocker (not the isEditable guard)
+        seedLockedProfile(ProfileApprovalStatus.DRAFT);
+        mockMvc.perform(put("/api/student/profile").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(fullProfile("ECE", "2027"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_LOCKED"));
+    }
+
+    @Test
+    void edit_whenUnlocked_stillWorks() throws Exception {
+        // regression: an unlocked draft is editable (the happy path is not broken by the lock guard)
+        mockMvc.perform(put("/api/student/profile").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(fullProfile("CSE", "2026"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isLocked").value(false));
+    }
+
     // ── authz ──
 
     @Test
@@ -280,6 +327,25 @@ class StudentProfileTest {
         p.getPlacement().setSkills(List.of("Java"));
         p.setProfileApprovalStatus(ProfileApprovalStatus.REJECTED);
         p.setRejectionReason(reason);
+        p.setCompletionPercent(100);
+        mongoTemplate.save(p);
+    }
+
+    /** Seeds a complete, LOCKED profile in the given approval status for the test student (Story 3.4). */
+    private void seedLockedProfile(ProfileApprovalStatus status) {
+        StudentProfile p = new StudentProfile();
+        p.setTenantId(tenantId);
+        p.setStudentId(studentId);
+        p.setRollNumber("21CS001");
+        p.setBatch("2026");
+        p.getPersonal().setFullName("Asha Rao");
+        p.getPersonal().setPhone("9990001234");
+        p.getAcademic().setBranch("CSE");
+        p.getAcademic().setCgpa(8.1);
+        p.getAcademic().setActiveBacklogs(0);
+        p.getPlacement().setSkills(List.of("Java"));
+        p.setProfileApprovalStatus(status);
+        p.setLocked(true);
         p.setCompletionPercent(100);
         mongoTemplate.save(p);
     }

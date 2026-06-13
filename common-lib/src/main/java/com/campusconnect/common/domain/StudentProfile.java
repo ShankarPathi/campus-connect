@@ -10,8 +10,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
  * carry the fields the Epic-5 eligibility engine reads ({@code academic.branch/cgpa/activeBacklogs},
  * {@code batch}, {@code isPlaced}).
  *
- * <p>{@code profileApprovalStatus} moves {@code DRAFT → PENDING_APPROVAL} on submit; approve/reject is
- * Story 3.3 and the season edit-lock ({@code isLocked}) is Story 3.4 — neither field/behaviour is built here.
+ * <p>{@code profileApprovalStatus} moves {@code DRAFT → PENDING_APPROVAL} on submit (approve/reject is
+ * Story 3.3). {@code isLocked} (Story 3.4) is the season edit-lock — <b>independent</b> of approval: when
+ * set, the student cannot edit/submit/replace-résumé even on an {@code APPROVED} profile (the architecture's
+ * "approval ≠ lock"). The two fields move separately and neither derives from the other.
  */
 @Document("studentProfiles")
 @CompoundIndex(name = "uniq_tenant_student", def = "{'tenantId': 1, 'studentId': 1}", unique = true)
@@ -27,6 +29,8 @@ public class StudentProfile extends TenantAwareDocument {
     /** Set by a College-Admin rejection (Story 3.3); cleared on the student's re-submit. Null otherwise. */
     private String rejectionReason;
     private boolean isPlaced = false;
+    /** Season edit-lock (Story 3.4); independent of {@code profileApprovalStatus}. Freezes student writes. */
+    private boolean isLocked = false;
     private int completionPercent = 0;
 
     public String getStudentId() {
@@ -99,6 +103,14 @@ public class StudentProfile extends TenantAwareDocument {
 
     public void setPlaced(boolean placed) {
         isPlaced = placed;
+    }
+
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    public void setLocked(boolean locked) {
+        isLocked = locked;
     }
 
     public int getCompletionPercent() {

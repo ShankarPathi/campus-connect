@@ -58,6 +58,30 @@ public class ProfileApprovalService {
                 .toList();
     }
 
+    /**
+     * Season lock (Story 3.4): freeze every profile in the admin's tenant ({@code isLocked = true}),
+     * independent of approval status — a frozen profile cannot be edited/submitted by the student even if
+     * APPROVED. Idempotent (re-locking is a no-op for already-locked rows). Records one audit row with the
+     * affected count and returns it. Does NOT touch {@code profileApprovalStatus} (approval ≠ lock).
+     */
+    public long lockSeason() {
+        return setSeasonLock(true, AuditAction.PROFILE_LOCKED);
+    }
+
+    /** Season unlock (Story 3.4): clear {@code isLocked} on every profile in the tenant. Idempotent. */
+    public long unlockSeason() {
+        return setSeasonLock(false, AuditAction.PROFILE_UNLOCKED);
+    }
+
+    private long setSeasonLock(boolean locked, AuditAction action) {
+        long affected = profileRepository.setLockedForTenant(locked);
+        if (affected > 0) { // an empty tenant is a no-op — no security event to record
+            auditService.record(action, ENTITY_TYPE, TenantContext.requireTenantId(),
+                    null, "isLocked=" + locked + "; affected=" + affected);
+        }
+        return affected;
+    }
+
     /** Approve a PENDING_APPROVAL profile in the admin's tenant → APPROVED; audit + notify. */
     public void approve(String studentId) {
         StudentProfile profile = loadPendingProfile(studentId);

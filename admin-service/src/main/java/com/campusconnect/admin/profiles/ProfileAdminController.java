@@ -56,4 +56,14 @@ public class ProfileAdminController {
         approvalService.editAcademics(studentId, request);
         return ApiResponse.ok(Boolean.TRUE, "Profile updated.");
     }
+
+    @PostMapping("/lock")
+    public ApiResponse<Long> lock() {
+        return ApiResponse.ok(approvalService.lockSeason(), "Profiles locked for the season.");
+    }
+
+    @PostMapping("/unlock")
+    public ApiResponse<Long> unlock() {
+        return ApiResponse.ok(approvalService.unlockSeason(), "Profiles unlocked.");
+    }
 }

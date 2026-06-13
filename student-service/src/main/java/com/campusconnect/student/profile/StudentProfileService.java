@@ -48,6 +48,10 @@ public class StudentProfileService {
         String studentId = currentStudentId();
         StudentProfile profile = profileRepository.findByStudentId(studentId).orElseGet(this::initialDraft);
 
+        // Season edit-lock (Story 3.4): a locked profile is frozen regardless of approval status — checked
+        // BEFORE the status guard so a locked APPROVED profile reports PROFILE_LOCKED, not a status error.
+        requireUnlocked(profile, "edited");
+
         // Edit guard (decision A): a submitted profile is not silently mutated — only DRAFT/REJECTED edit.
         if (profile.getId() != null && !isEditable(profile.getProfileApprovalStatus())) {
             throw new BusinessException(ErrorCode.ILLEGAL_STATE_TRANSITION,
@@ -66,6 +70,9 @@ public class StudentProfileService {
         StudentProfile profile = profileRepository.findByStudentId(currentStudentId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_INCOMPLETE,
                         "Complete your profile before submitting."));
+
+        // Season edit-lock (Story 3.4): a locked profile cannot move into the approval queue.
+        requireUnlocked(profile, "submitted");
 
         // Submittable from DRAFT or REJECTED (re-submit after a College-Admin rejection, Story 3.3) —
         // the same editable states, so reuse isEditable.
@@ -94,6 +101,18 @@ public class StudentProfileService {
     /** A profile is editable — and re-submittable — only in DRAFT or REJECTED. */
     private static boolean isEditable(ProfileApprovalStatus status) {
         return status == ProfileApprovalStatus.DRAFT || status == ProfileApprovalStatus.REJECTED;
+    }
+
+    /**
+     * Rejects the write with {@code PROFILE_LOCKED} (409) when the profile is locked for the season
+     * (Story 3.4). A never-saved profile (no id) is never locked. The lock is independent of approval —
+     * even an {@code APPROVED} profile is frozen.
+     */
+    private static void requireUnlocked(StudentProfile profile, String action) {
+        if (profile.getId() != null && profile.isLocked()) {
+            throw new BusinessException(ErrorCode.PROFILE_LOCKED,
+                    "Your profile is locked for the placement season and cannot be " + action + ".");
+        }
     }
 
     private StudentProfile initialDraft() {

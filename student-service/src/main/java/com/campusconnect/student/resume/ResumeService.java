@@ -5,6 +5,7 @@ import com.campusconnect.common.exception.BusinessException;
 import com.campusconnect.common.file.FileStorageService;
 import com.campusconnect.common.file.PdfValidation;
 import com.campusconnect.common.repository.ResumeRepository;
+import com.campusconnect.common.repository.StudentProfileRepository;
 import com.campusconnect.common.tenancy.TenantContext;
 import com.campusconnect.common.web.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,18 +31,30 @@ public class ResumeService {
     private static final String PDF_CONTENT_TYPE = "application/pdf";
 
     private final ResumeRepository resumeRepository;
+    private final StudentProfileRepository profileRepository;
     private final FileStorageService fileStorage;
     private final long maxSizeBytes;
 
-    public ResumeService(ResumeRepository resumeRepository, FileStorageService fileStorage,
+    public ResumeService(ResumeRepository resumeRepository, StudentProfileRepository profileRepository,
+                         FileStorageService fileStorage,
                          @Value("${app.resume.max-size-bytes:5242880}") long maxSizeBytes) {
         this.resumeRepository = resumeRepository;
+        this.profileRepository = profileRepository;
         this.fileStorage = fileStorage;
         this.maxSizeBytes = maxSizeBytes;
     }
 
     /** Validate + store a new resume, making it the student's single active version. */
     public ResumeResponse upload(MultipartFile file) {
+        // Season edit-lock (Story 3.4): the résumé is part of the frozen profile — a locked profile cannot
+        // replace it. A student with no profile yet cannot be locked (keep the existing behaviour).
+        profileRepository.findByStudentId(currentUserId()).ifPresent(p -> {
+            if (p.isLocked()) {
+                throw new BusinessException(ErrorCode.PROFILE_LOCKED,
+                        "Your profile is locked for the placement season; the résumé cannot be replaced.");
+            }
+        });
+
         byte[] bytes = readNonEmpty(file);
         if (!PdfValidation.isPdf(bytes)) {
             throw new BusinessException(ErrorCode.RESUME_INVALID_TYPE, "Only PDF resumes are accepted.");

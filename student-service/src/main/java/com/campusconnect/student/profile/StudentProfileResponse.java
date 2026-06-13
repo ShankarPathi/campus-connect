@@ -19,6 +19,7 @@ public record StudentProfileResponse(
         ProfileApprovalStatus profileApprovalStatus,
         String rejectionReason,
         boolean isPlaced,
+        boolean isLocked,
         int completionPercent) {
 
     public record Personal(String fullName, String phone, String gender, String dateOfBirth, String address) {
@@ -42,6 +43,7 @@ public record StudentProfileResponse(
                 p.getProfileApprovalStatus(),
                 p.getRejectionReason(),
                 p.isPlaced(),
+                p.isLocked(),
                 p.getCompletionPercent());
     }
 }

@@ -196,6 +196,68 @@ class ProfileApprovalTest {
                 .andExpect(jsonPath("$.data.length()").value(2));
     }
 
+    // ── season lock / unlock (Story 3.4): independent of approval ──
+
+    @Test
+    void lock_freezesEveryProfile_keepsStatus_auditsOnce_andReturnsCount() throws Exception {
+        seedProfile("p1", ProfileApprovalStatus.APPROVED, "CSE", 8.1);
+        seedProfile("p2", ProfileApprovalStatus.DRAFT, "ECE", 7.5);
+        seedProfile("p3", ProfileApprovalStatus.PENDING_APPROVAL, "CSE", 9.0);
+
+        mockMvc.perform(post("/api/admin/profiles/lock").header(HttpHeaders.AUTHORIZATION, adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(3)); // affected count
+
+        assertThat(mongoTemplate.findAll(StudentProfile.class)).allMatch(StudentProfile::isLocked);
+        // approval status untouched — the two fields are independent
+        assertThat(profile("p1").getProfileApprovalStatus()).isEqualTo(ProfileApprovalStatus.APPROVED);
+        assertThat(profile("p2").getProfileApprovalStatus()).isEqualTo(ProfileApprovalStatus.DRAFT);
+        assertThat(audits()).singleElement().satisfies(a -> {
+            assertThat(a.getAction()).isEqualTo("PROFILE_LOCKED");
+            assertThat(a.getActor()).isEqualTo("admin-1"); // the acting admin (JWT subject)
+        });
+    }
+
+    @Test
+    void unlock_clearsLockOnEveryProfile_keepsStatus_auditsOnce() throws Exception {
+        seedLockedProfile("p1", ProfileApprovalStatus.APPROVED);
+        seedLockedProfile("p2", ProfileApprovalStatus.APPROVED);
+
+        mockMvc.perform(post("/api/admin/profiles/unlock").header(HttpHeaders.AUTHORIZATION, adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(2));
+
+        assertThat(mongoTemplate.findAll(StudentProfile.class)).noneMatch(StudentProfile::isLocked);
+        assertThat(profile("p1").getProfileApprovalStatus()).isEqualTo(ProfileApprovalStatus.APPROVED);
+        assertThat(audits()).extracting(AuditLog::getAction).containsExactly("PROFILE_UNLOCKED");
+    }
+
+    @Test
+    void lock_isIdempotent() throws Exception {
+        seedProfile("p1", ProfileApprovalStatus.APPROVED, "CSE", 8.1);
+        mockMvc.perform(post("/api/admin/profiles/lock").header(HttpHeaders.AUTHORIZATION, adminToken()))
+                .andExpect(status().isOk());
+        // a second lock leaves the same end-state (already-locked rows simply do not change)
+        mockMvc.perform(post("/api/admin/profiles/lock").header(HttpHeaders.AUTHORIZATION, adminToken()))
+                .andExpect(status().isOk());
+        assertThat(profile("p1").isLocked()).isTrue();
+    }
+
+    @Test
+    void adminEdit_onLockedProfile_stillSucceeds() throws Exception {
+        // AC 9: the lock freezes the STUDENT, not admin authority — a TPO can still correct a locked profile
+        seedLockedProfile("p1", ProfileApprovalStatus.PENDING_APPROVAL);
+        mockMvc.perform(patch("/api/admin/profiles/{id}", "p1")
+                        .header(HttpHeaders.AUTHORIZATION, adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new AdminEditProfileRequest(null, 7.0, null, null))))
+                .andExpect(status().isOk());
+        StudentProfile p = profile("p1");
+        assertThat(p.getAcademic().getCgpa()).isEqualTo(7.0);
+        assertThat(p.isLocked()).isTrue(); // edit does not change the lock
+        assertThat(audits()).extracting(AuditLog::getAction).containsExactly("PROFILE_EDITED");
+    }
+
     @Test
     void nonAdmin_isForbidden403() throws Exception {
         seedActiveUser("stud-x", Role.STUDENT, TENANT);
@@ -287,6 +349,14 @@ class ProfileApprovalTest {
         p.getPlacement().setSkills(List.of("Java"));
         p.setProfileApprovalStatus(status);
         p.setCompletionPercent(100);
+        mongoTemplate.save(p);
+    }
+
+    /** As {@link #seedProfile} but pre-locked (Story 3.4). */
+    private void seedLockedProfile(String studentId, ProfileApprovalStatus status) {
+        seedProfile(studentId, status, "CSE", 8.1);
+        StudentProfile p = profile(studentId);
+        p.setLocked(true);
         mongoTemplate.save(p);
     }
 
