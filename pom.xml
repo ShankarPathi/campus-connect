@@ -41,6 +41,9 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <!-- jjwt (JWT) is third-party, not managed by the Spring Boot BOM — pin it. -->
         <jjwt.version>0.13.0</jjwt.version>
+        <!-- AWS SDK v2 (S3 client → MinIO, Story 3.2). Not Boot-managed — pin its BOM.
+             Verify the latest 2.x patch against Maven Central at setup (like the pins above). -->
+        <aws-sdk.version>2.31.78</aws-sdk.version>
     </properties>
 
     <dependencyManagement>
@@ -64,6 +67,14 @@
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
                 <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- AWS SDK v2 BOM (S3 + presigner for MinIO object storage, Story 3.2) -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws-sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

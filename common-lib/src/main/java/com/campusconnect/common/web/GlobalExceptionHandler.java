@@ -107,7 +107,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ApiError error;
         HttpStatusCode status = statusCode;
 
-        if (ex instanceof MethodArgumentNotValidException manve) {
+        if (ex instanceof org.springframework.web.multipart.MaxUploadSizeExceededException) {
+            // Multipart upload past the servlet hard ceiling (Story 3.2) → 400 RESUME_TOO_LARGE, matching
+            // the service-level size check so an oversized file is never a raw 500.
+            error = ApiError.of(ErrorCode.RESUME_TOO_LARGE.name(), "The uploaded file is too large");
+            status = ErrorCode.RESUME_TOO_LARGE.status();
+        } else if (ex instanceof MethodArgumentNotValidException manve) {
             Map<String, String> fields = new LinkedHashMap<>();
             for (FieldError fe : manve.getBindingResult().getFieldErrors()) {
                 fields.putIfAbsent(fe.getField(), fe.getDefaultMessage());

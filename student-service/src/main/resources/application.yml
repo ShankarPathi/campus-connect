@@ -13,6 +13,12 @@ spring:
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
+  # Resume upload (Story 3.2): servlet hard ceiling, set ABOVE app.resume.max-size-bytes so the
+  # service-level check yields a clean RESUME_TOO_LARGE; a file past this ceiling is also mapped to it.
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:11MB}
 
 # Email-verification link sent to registrants. token-ttl controls how long a link stays valid.
 app:
@@ -27,6 +33,16 @@ app:
     otp:
       limit: ${RATELIMIT_OTP_LIMIT:3}
       window: ${RATELIMIT_OTP_WINDOW:PT1H}
+  # Resume (Story 3.2, FR-8). Max accepted PDF size; the eventual source is the systemConfig two-layer
+  # service (architecture §5) — using app config until that lands.
+  resume:
+    max-size-bytes: ${RESUME_MAX_SIZE_BYTES:5242880}   # 5 MB
+  # Object storage (Story 3.2, NFR-2): private MinIO bucket; dev uses the docker-compose MinIO.
+  storage:
+    endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
+    access-key: ${STORAGE_ACCESS_KEY:minioadmin}
+    secret-key: ${STORAGE_SECRET_KEY:minioadmin}
+    bucket: ${STORAGE_BUCKET:campus-connect}
 
 # Actuator: expose health (+ info) for the AC and ops probes.
 management:

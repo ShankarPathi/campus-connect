@@ -1,11 +1,13 @@
 package com.campusconnect.student.platform;
 
 import com.campusconnect.common.domain.AccountStatus;
+import com.campusconnect.common.domain.Resume;
 import com.campusconnect.common.domain.Season;
 import com.campusconnect.common.domain.StudentProfile;
 import com.campusconnect.common.domain.Tenant;
 import com.campusconnect.common.domain.TenantStatus;
 import com.campusconnect.common.domain.User;
+import com.campusconnect.common.repository.ResumeRepository;
 import com.campusconnect.common.repository.StudentProfileRepository;
 import com.campusconnect.common.repository.TenantRepository;
 import com.campusconnect.common.repository.UserRepository;
@@ -77,6 +79,8 @@ class CrossTenantIsolationTest {
     @Autowired
     StudentProfileRepository studentProfileRepository;
     @Autowired
+    ResumeRepository resumeRepository;
+    @Autowired
     MongoTemplate mongoTemplate;
 
     MockMvc mockMvc;
@@ -88,6 +92,7 @@ class CrossTenantIsolationTest {
         mongoTemplate.remove(new Query(), User.class);
         mongoTemplate.remove(new Query(), Tenant.class);
         mongoTemplate.remove(new Query(), StudentProfile.class);
+        mongoTemplate.remove(new Query(), Resume.class);
     }
 
     @Test
@@ -170,6 +175,42 @@ class CrossTenantIsolationTest {
         runInTenant(tenantA, () -> assertThat(studentProfileRepository.findByStudentId(studentA)).isPresent());
         // genuinely partitioned: exactly one profile exists, and it belongs to tenant A
         assertThat(mongoTemplate.findAll(StudentProfile.class)).hasSize(1);
+    }
+
+    @Test
+    void resumesAreIsolatedPerTenant() {
+        String tenantA = createTenant("ralpha");
+        String tenantB = createTenant("rbeta");
+
+        // The SAME userId has a resume in BOTH tenants, so ONLY the tenantId filter can distinguish the
+        // rows — this isolates the tenant-scoping mechanism (not the userId, which exists in both).
+        // (The resume HTTP/ownership path is covered end-to-end by ResumeUploadTest; the cross-tenant
+        // vector for resumes is the tenant-aware repository, which this proves.)
+        String sharedUserId = "shared-stud";
+        saveResumeInTenant(tenantA, sharedUserId, "a.pdf");
+        saveResumeInTenant(tenantB, sharedUserId, "b.pdf");
+
+        // ISOLATION: each tenant's scope resolves only ITS OWN resume for the shared userId, never the other's.
+        runInTenant(tenantA, () -> assertThat(resumeRepository.findActiveByUserId(sharedUserId))
+                .get().extracting(Resume::getOriginalName).isEqualTo("a.pdf"));
+        runInTenant(tenantB, () -> assertThat(resumeRepository.findActiveByUserId(sharedUserId))
+                .get().extracting(Resume::getOriginalName).isEqualTo("b.pdf"));
+        // genuinely partitioned: a tenant-UNAWARE scan shows both rows
+        assertThat(mongoTemplate.findAll(Resume.class)).hasSize(2);
+    }
+
+    private void saveResumeInTenant(String tenantId, String userId, String originalName) {
+        runInTenant(tenantId, () -> {
+            Resume r = new Resume();
+            r.setUserId(userId);
+            r.setS3Key("resumes/" + tenantId + "/" + userId + "/1-x.pdf");
+            r.setOriginalName(originalName);
+            r.setMimeType("application/pdf");
+            r.setVersion(1);
+            r.setActive(true);
+            r.setSizeBytes(100);
+            resumeRepository.save(r); // tenant-aware save stamps tenantId from context
+        });
     }
 
     // ── helpers ──
