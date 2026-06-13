@@ -24,6 +24,8 @@ public class StudentProfile extends TenantAwareDocument {
     private AcademicDetails academic = new AcademicDetails();
     private PlacementDetails placement = new PlacementDetails();
     private ProfileApprovalStatus profileApprovalStatus = ProfileApprovalStatus.DRAFT;
+    /** Set by a College-Admin rejection (Story 3.3); cleared on the student's re-submit. Null otherwise. */
+    private String rejectionReason;
     private boolean isPlaced = false;
     private int completionPercent = 0;
 
@@ -81,6 +83,14 @@ public class StudentProfile extends TenantAwareDocument {
 
     public void setProfileApprovalStatus(ProfileApprovalStatus profileApprovalStatus) {
         this.profileApprovalStatus = profileApprovalStatus;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 
     public boolean isPlaced() {

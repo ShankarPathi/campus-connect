@@ -1,6 +1,7 @@
 package com.campusconnect.student.profile;
 
 import com.campusconnect.common.domain.AccountStatus;
+import com.campusconnect.common.domain.ProfileApprovalStatus;
 import com.campusconnect.common.domain.Season;
 import com.campusconnect.common.domain.StudentProfile;
 import com.campusconnect.common.domain.Tenant;
@@ -194,6 +195,35 @@ class StudentProfileTest {
                 .andExpect(jsonPath("$.data.rollNumber").doesNotExist());
     }
 
+    // ── rejection reason + re-submit (Story 3.3) ──
+
+    @Test
+    void getProfile_whenRejected_exposesRejectionReason() throws Exception {
+        seedRejectedProfile("CGPA mismatch — please correct");
+        mockMvc.perform(get("/api/student/profile").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileApprovalStatus").value("REJECTED"))
+                .andExpect(jsonPath("$.data.rejectionReason").value("CGPA mismatch — please correct"));
+    }
+
+    @Test
+    void submit_whenRejected_movesToPending_andClearsReason() throws Exception {
+        seedRejectedProfile("CGPA mismatch");
+        mockMvc.perform(post("/api/student/profile/submit").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileApprovalStatus").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.data.rejectionReason").doesNotExist());
+    }
+
+    @Test
+    void edit_whenRejected_isAllowed() throws Exception {
+        seedRejectedProfile("fix it");
+        mockMvc.perform(put("/api/student/profile").header(HttpHeaders.AUTHORIZATION, token(studentId, Role.STUDENT))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(fullProfile("ECE", "2027"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completionPercent").value(100));
+    }
+
     // ── authz ──
 
     @Test
@@ -233,6 +263,25 @@ class StudentProfileTest {
         body.put("rollNumber", "21CS001");
         body.put("batch", batch);
         return body;
+    }
+
+    /** Seeds a complete REJECTED profile (with a reason) for the test student, directly via Mongo. */
+    private void seedRejectedProfile(String reason) {
+        StudentProfile p = new StudentProfile();
+        p.setTenantId(tenantId);
+        p.setStudentId(studentId);
+        p.setRollNumber("21CS001");
+        p.setBatch("2026");
+        p.getPersonal().setFullName("Asha Rao");
+        p.getPersonal().setPhone("9990001234");
+        p.getAcademic().setBranch("CSE");
+        p.getAcademic().setCgpa(8.1);
+        p.getAcademic().setActiveBacklogs(0);
+        p.getPlacement().setSkills(List.of("Java"));
+        p.setProfileApprovalStatus(ProfileApprovalStatus.REJECTED);
+        p.setRejectionReason(reason);
+        p.setCompletionPercent(100);
+        mongoTemplate.save(p);
     }
 
     private String token(String userId, Role role) {

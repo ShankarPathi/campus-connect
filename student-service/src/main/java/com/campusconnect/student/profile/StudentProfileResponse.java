@@ -17,6 +17,7 @@ public record StudentProfileResponse(
         Academic academic,
         Placement placement,
         ProfileApprovalStatus profileApprovalStatus,
+        String rejectionReason,
         boolean isPlaced,
         int completionPercent) {
 
@@ -39,6 +40,7 @@ public record StudentProfileResponse(
                 new Academic(p.getAcademic().getBranch(), p.getAcademic().getCgpa(), p.getAcademic().getActiveBacklogs()),
                 new Placement(p.getPlacement().getSkills(), p.getPlacement().getExpectedRole(), p.getPlacement().getAbout()),
                 p.getProfileApprovalStatus(),
+                p.getRejectionReason(),
                 p.isPlaced(),
                 p.getCompletionPercent());
     }

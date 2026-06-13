@@ -67,9 +67,11 @@ public class StudentProfileService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_INCOMPLETE,
                         "Complete your profile before submitting."));
 
-        if (profile.getProfileApprovalStatus() != ProfileApprovalStatus.DRAFT) {
+        // Submittable from DRAFT or REJECTED (re-submit after a College-Admin rejection, Story 3.3) —
+        // the same editable states, so reuse isEditable.
+        if (!isEditable(profile.getProfileApprovalStatus())) {
             throw new BusinessException(ErrorCode.ILLEGAL_STATE_TRANSITION,
-                    "Only a draft profile can be submitted.");
+                    "Only a draft or rejected profile can be submitted.");
         }
 
         profile.setCompletionPercent(ProfileCompletion.percentOf(profile));
@@ -79,6 +81,7 @@ public class StudentProfileService {
         }
 
         profile.setProfileApprovalStatus(ProfileApprovalStatus.PENDING_APPROVAL);
+        profile.setRejectionReason(null); // a fresh submission clears any prior rejection reason
         return StudentProfileResponse.from(profileRepository.save(profile));
     }
 
@@ -88,6 +91,7 @@ public class StudentProfileService {
         return TenantContext.getUserId();
     }
 
+    /** A profile is editable — and re-submittable — only in DRAFT or REJECTED. */
     private static boolean isEditable(ProfileApprovalStatus status) {
         return status == ProfileApprovalStatus.DRAFT || status == ProfileApprovalStatus.REJECTED;
     }

@@ -1,11 +1,13 @@
 package com.campusconnect.common.repository;
 
+import com.campusconnect.common.domain.ProfileApprovalStatus;
 import com.campusconnect.common.domain.StudentProfile;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -25,5 +27,10 @@ public class StudentProfileRepository extends TenantAwareRepository<StudentProfi
     /** The current tenant's profile for one student, if any. Tenant-scoped via the base {@code find}. */
     public Optional<StudentProfile> findByStudentId(String studentId) {
         return find(new Query(Criteria.where("studentId").is(studentId))).stream().findFirst();
+    }
+
+    /** The current tenant's profiles in a given approval status — backs the admin review queue (Story 3.3). */
+    public List<StudentProfile> findByApprovalStatus(ProfileApprovalStatus status) {
+        return find(new Query(Criteria.where("profileApprovalStatus").is(status)));
     }
 }
