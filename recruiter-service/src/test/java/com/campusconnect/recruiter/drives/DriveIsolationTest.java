@@ -32,6 +32,7 @@ import java.util.List;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -103,6 +104,22 @@ class DriveIsolationTest {
     @Test
     void recruiter_cannotReadAnotherTenantsDrive() throws Exception {
         mockMvc.perform(get("/api/recruiter/drives/{id}", driveOfB1).header(HttpHeaders.AUTHORIZATION, tokenA1()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void recruiter_cannotSubmitAnotherRecruitersDrive() throws Exception {
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", driveOfA2).header(HttpHeaders.AUTHORIZATION, tokenA1()))
+                .andExpect(status().isNotFound());
+        // the victim drive is untouched (still DRAFT, never submitted)
+        Drive d = mongoTemplate.findById(driveOfA2, Drive.class);
+        org.assertj.core.api.Assertions.assertThat(d).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(d.getStatus()).isEqualTo(DriveStatus.DRAFT);
+    }
+
+    @Test
+    void recruiter_cannotSubmitAnotherTenantsDrive() throws Exception {
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", driveOfB1).header(HttpHeaders.AUTHORIZATION, tokenA1()))
                 .andExpect(status().isNotFound());
     }
 

@@ -48,6 +48,7 @@ public enum ErrorCode {
     RESUME_TOO_LARGE(HttpStatus.BAD_REQUEST),
 
     // ── drive (Epic 4) ──
+    DRIVE_INCOMPLETE(HttpStatus.BAD_REQUEST),
     DRIVE_NOT_OPEN(HttpStatus.CONFLICT),
     DRIVE_DEADLINE_PASSED(HttpStatus.CONFLICT),
     ILLEGAL_STATE_TRANSITION(HttpStatus.CONFLICT),

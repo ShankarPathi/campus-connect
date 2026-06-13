@@ -65,6 +65,29 @@ public class DriveService {
         return DriveResponse.of(driveRepository.save(drive));
     }
 
+    /**
+     * Submit one of the caller's own DRAFT drives for College-Admin approval (Story 4.2): {@code DRAFT →
+     * PENDING_APPROVAL}, gated by completeness. State guard first (must be DRAFT), then the completeness
+     * gate ({@link #isSubmittable}). After this the drive is frozen from recruiter edits (the DRAFT-only
+     * {@link #update} guard) until the admin acts (Story 4.3).
+     */
+    public DriveResponse submit(String id) {
+        Drive drive = loadMyDrive(id);
+        if (drive.getStatus() != DriveStatus.DRAFT) {
+            throw new BusinessException(ErrorCode.ILLEGAL_STATE_TRANSITION,
+                    "Only a draft drive can be submitted.");
+        }
+        if (!isSubmittable(drive)) {
+            throw new BusinessException(ErrorCode.DRIVE_INCOMPLETE,
+                    "Complete all required fields and set a future deadline before submitting.");
+        }
+        // Re-assert the create/update invariant at the promotion gate: the college may have dropped a
+        // branch/batch since the draft was last saved — a stale drive must not reach the approval queue.
+        validateAgainstTenant(drive);
+        drive.setStatus(DriveStatus.PENDING_APPROVAL);
+        return DriveResponse.of(driveRepository.save(drive));
+    }
+
     /** One of the caller's own drives (404 for another recruiter's / another tenant's / missing). */
     public DriveResponse getMyDrive(String id) {
         return DriveResponse.of(loadMyDrive(id));

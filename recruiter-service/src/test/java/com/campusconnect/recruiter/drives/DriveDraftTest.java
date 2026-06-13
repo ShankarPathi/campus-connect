@@ -139,6 +139,86 @@ class DriveDraftTest {
                 .andExpect(jsonPath("$.data.status").value("DRAFT"));
     }
 
+    // ── submit (Story 4.2) ──
+
+    @Test
+    void submit_completeDraft_movesToPendingApproval() throws Exception {
+        String id = createDrive(); // fullDrive() is a complete, future-deadline draft
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING_APPROVAL"));
+    }
+
+    @Test
+    void submit_incompleteDraft_is400DriveIncomplete() throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("role", "SDE Intern"); // role only — missing everything else
+        String id = createDriveFrom(body);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("DRIVE_INCOMPLETE"));
+        // status unchanged
+        mockMvc.perform(get("/api/recruiter/drives/{id}", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(jsonPath("$.data.status").value("DRAFT"));
+    }
+
+    @Test
+    void submit_pastDeadline_is400DriveIncomplete() throws Exception {
+        Map<String, Object> body = fullDrive();
+        body.put("applyDeadline", "2020-01-01T00:00:00Z"); // complete but the deadline already passed
+        String id = createDriveFrom(body);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("DRIVE_INCOMPLETE"));
+    }
+
+    @Test
+    void submit_alreadyPending_is409() throws Exception {
+        String id = createDrive();
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("ILLEGAL_STATE_TRANSITION"));
+    }
+
+    @Test
+    void edit_afterSubmit_is409() throws Exception {
+        // AC4: a submitted (PENDING_APPROVAL) drive is frozen from edits — the 4.1 DRAFT-only update guard fires
+        String id = createDrive();
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/api/recruiter/drives/{id}", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(fullDrive())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("ILLEGAL_STATE_TRANSITION"));
+    }
+
+    @Test
+    void submit_staleBranch_afterCollegeDropsIt_is400Validation() throws Exception {
+        String id = createDrive(); // a complete draft with branches [CSE, ECE]
+        // the college retires CSE after the draft was saved — submit must re-assert tenant validity
+        Tenant t = tenantRepository.findById(tenantId).orElseThrow();
+        t.setBranches(List.of("ECE"));
+        tenantRepository.save(t);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void submit_noToken_is401() throws Exception {
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", "any")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void submit_studentToken_is403Forbidden() throws Exception {
+        String student = seedUser("stud2@v.edu", Role.STUDENT, AccountStatus.ACTIVE);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", "any").header(HttpHeaders.AUTHORIZATION, token(student, Role.STUDENT)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
     // ── validation ──
 
     @Test
@@ -201,8 +281,12 @@ class DriveDraftTest {
     // ── helpers ──
 
     private String createDrive() throws Exception {
+        return createDriveFrom(fullDrive());
+    }
+
+    private String createDriveFrom(Map<String, Object> body) throws Exception {
         String res = mockMvc.perform(post("/api/recruiter/drives").header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER))
-                        .contentType(MediaType.APPLICATION_JSON).content(json(fullDrive())))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(body)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(res).at("/data/id").asText();
     }

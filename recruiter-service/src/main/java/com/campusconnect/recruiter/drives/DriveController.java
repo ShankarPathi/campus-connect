@@ -49,4 +49,9 @@ public class DriveController {
     public ApiResponse<DriveResponse> update(@PathVariable String id, @Valid @RequestBody DriveRequest request) {
         return ApiResponse.ok(driveService.update(id, request), "Drive draft updated.");
     }
+
+    @PostMapping("/{id}/submit")
+    public ApiResponse<DriveResponse> submit(@PathVariable String id) {
+        return ApiResponse.ok(driveService.submit(id), "Drive submitted for approval.");
+    }
 }
