@@ -54,4 +54,9 @@ public class DriveController {
     public ApiResponse<DriveResponse> submit(@PathVariable String id) {
         return ApiResponse.ok(driveService.submit(id), "Drive submitted for approval.");
     }
+
+    @PostMapping("/{id}/cancel")
+    public ApiResponse<DriveResponse> cancel(@PathVariable String id) {
+        return ApiResponse.ok(driveService.cancel(id), "Drive cancelled.");
+    }
 }

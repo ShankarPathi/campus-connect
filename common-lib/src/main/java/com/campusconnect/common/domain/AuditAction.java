@@ -12,5 +12,6 @@ public enum AuditAction {
     PROFILE_UNLOCKED,
     DRIVE_APPROVED,
     DRIVE_REJECTED,
-    DRIVE_EDITED
+    DRIVE_EDITED,
+    DRIVE_CANCELLED
 }

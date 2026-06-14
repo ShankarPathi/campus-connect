@@ -124,6 +124,15 @@ class DriveIsolationTest {
     }
 
     @Test
+    void recruiter_cannotCancelAnotherRecruitersDrive() throws Exception {
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", driveOfA2).header(HttpHeaders.AUTHORIZATION, tokenA1()))
+                .andExpect(status().isNotFound());
+        // the victim drive is untouched (still DRAFT, never cancelled)
+        org.assertj.core.api.Assertions.assertThat(mongoTemplate.findById(driveOfA2, Drive.class).getStatus())
+                .isEqualTo(DriveStatus.DRAFT);
+    }
+
+    @Test
     void recruiterList_excludesOtherOwnersDrives() throws Exception {
         mockMvc.perform(get("/api/recruiter/drives").header(HttpHeaders.AUTHORIZATION, tokenA1()))
                 .andExpect(status().isOk())

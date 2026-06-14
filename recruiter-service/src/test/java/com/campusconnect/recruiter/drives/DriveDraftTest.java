@@ -1,6 +1,7 @@
 package com.campusconnect.recruiter.drives;
 
 import com.campusconnect.common.domain.AccountStatus;
+import com.campusconnect.common.domain.AuditLog;
 import com.campusconnect.common.domain.BacklogPolicy;
 import com.campusconnect.common.domain.Drive;
 import com.campusconnect.common.domain.DriveStatus;
@@ -35,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -74,6 +76,7 @@ class DriveDraftTest {
         mongoTemplate.remove(new Query(), Tenant.class);
         mongoTemplate.remove(new Query(), Drive.class);
         mongoTemplate.remove(new Query(), RecruiterProfile.class);
+        mongoTemplate.remove(new Query(), AuditLog.class);
         tenantId = seedTenant("vignan", List.of("CSE", "ECE"), List.of("2026", "2027"));
         recruiterId = seedRecruiter("hr@acme.com", AccountStatus.ACTIVE, "Acme Corp");
     }
@@ -253,6 +256,54 @@ class DriveDraftTest {
                 .andExpect(jsonPath("$.data.rejectionReason").doesNotExist());
     }
 
+    // ── cancel (Story 4.4) ──
+
+    @Test
+    void cancel_publishedDrive_movesToCancelled_andAudits() throws Exception {
+        String id = seedDriveInStatus(DriveStatus.PUBLISHED);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+        assertThat(mongoTemplate.findAll(AuditLog.class)).extracting(AuditLog::getAction).containsExactly("DRIVE_CANCELLED");
+    }
+
+    @Test
+    void cancel_pendingDrive_movesToCancelled() throws Exception {
+        String id = seedDriveInStatus(DriveStatus.PENDING_APPROVAL);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+    }
+
+    @Test
+    void cancel_draft_is409() throws Exception {
+        String id = seedDriveInStatus(DriveStatus.DRAFT); // DRAFT is not a cancellable state
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("ILLEGAL_STATE_TRANSITION"));
+    }
+
+    @Test
+    void cancel_alreadyCancelled_is409() throws Exception {
+        String id = seedDriveInStatus(DriveStatus.CANCELLED); // terminal — no outgoing transition
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("ILLEGAL_STATE_TRANSITION"));
+    }
+
+    @Test
+    void cancel_noToken_is401() throws Exception {
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", "any")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void cancel_studentToken_is403Forbidden() throws Exception {
+        String student = seedUser("stud3@v.edu", Role.STUDENT, AccountStatus.ACTIVE);
+        mockMvc.perform(post("/api/recruiter/drives/{id}/cancel", "any").header(HttpHeaders.AUTHORIZATION, token(student, Role.STUDENT)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
     // ── validation ──
 
     @Test
@@ -382,6 +433,27 @@ class DriveDraftTest {
         p.setCompanyName(companyName);
         mongoTemplate.save(p);
         return id;
+    }
+
+    /** Seeds a complete drive owned by the test recruiter in the given status (Story 4.4 cancel cases). */
+    private String seedDriveInStatus(DriveStatus status) {
+        Drive d = new Drive();
+        d.setTenantId(tenantId);
+        d.setCreatedBy(recruiterId);
+        d.setCompanyName("Acme Corp");
+        d.setRole("SDE-1");
+        d.setPackageLpa(12.0);
+        d.setLocation("Bengaluru");
+        d.setOpenings(3);
+        d.setApplyDeadline(java.time.Instant.parse("2027-01-01T00:00:00Z"));
+        EligibilityCriteria e = new EligibilityCriteria();
+        e.setBranches(new java.util.ArrayList<>(List.of("CSE", "ECE")));
+        e.setMinCgpa(7.0);
+        e.setBacklogPolicy(BacklogPolicy.NO_BACKLOG);
+        e.setBatch("2026");
+        d.setEligibility(e);
+        d.setStatus(status);
+        return mongoTemplate.save(d).getId();
     }
 
     /** Seeds a complete, admin-REJECTED drive owned by the test recruiter (Story 4.3 resubmit cases). */

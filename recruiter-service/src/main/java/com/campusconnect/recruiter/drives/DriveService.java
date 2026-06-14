@@ -1,6 +1,9 @@
 package com.campusconnect.recruiter.drives;
 
+import com.campusconnect.common.audit.AuditService;
+import com.campusconnect.common.domain.AuditAction;
 import com.campusconnect.common.domain.Drive;
+import com.campusconnect.common.domain.DriveLifecycle;
 import com.campusconnect.common.domain.DriveStatus;
 import com.campusconnect.common.domain.EligibilityCriteria;
 import com.campusconnect.common.domain.RecruiterProfile;
@@ -33,12 +36,14 @@ public class DriveService {
     private final DriveRepository driveRepository;
     private final TenantRepository tenantRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
+    private final AuditService auditService;
 
     public DriveService(DriveRepository driveRepository, TenantRepository tenantRepository,
-                        RecruiterProfileRepository recruiterProfileRepository) {
+                        RecruiterProfileRepository recruiterProfileRepository, AuditService auditService) {
         this.driveRepository = driveRepository;
         this.tenantRepository = tenantRepository;
         this.recruiterProfileRepository = recruiterProfileRepository;
+        this.auditService = auditService;
     }
 
     /** Create a DRAFT drive owned by the calling recruiter, snapshotting their company name. */
@@ -87,6 +92,26 @@ public class DriveService {
         drive.setRejectionReason(null); // a fresh submission clears any prior admin-rejection reason
         drive.setStatus(DriveStatus.PENDING_APPROVAL);
         return DriveResponse.of(driveRepository.save(drive));
+    }
+
+    /**
+     * Cancel one of the caller's own drives (Story 4.4): an active drive ({@code PENDING_APPROVAL},
+     * {@code PUBLISHED}, or {@code ONGOING}) → {@code CANCELLED} (terminal), enforced by the canonical
+     * {@link DriveLifecycle} (an illegal source state → 409). Audited as {@code DRIVE_CANCELLED}.
+     *
+     * <p>NOTE: the cascade the epic describes — auto-rejecting the drive's pending applications and
+     * notifying affected students — is deferred to Epic 5 (applications) + Epic 8 (notify), neither of
+     * which exists yet (see deferred-work.md). This performs only the status transition.
+     */
+    public DriveResponse cancel(String id) {
+        Drive drive = loadMyDrive(id);
+        DriveStatus prior = drive.getStatus();
+        DriveLifecycle.requireTransition(prior, DriveStatus.CANCELLED);
+        drive.setStatus(DriveStatus.CANCELLED);
+        Drive saved = driveRepository.save(drive);
+        auditService.record(AuditAction.DRIVE_CANCELLED, "Drive", id,
+                "status=" + prior, "status=CANCELLED");
+        return DriveResponse.of(saved);
     }
 
     /** One of the caller's own drives (404 for another recruiter's / another tenant's / missing). */
