@@ -33,6 +33,8 @@ public class Drive extends TenantAwareDocument {
     private Integer openings;
     private Instant applyDeadline;
     private DriveStatus status = DriveStatus.DRAFT;
+    /** Set by a College-Admin rejection (Story 4.3); cleared on the recruiter's re-submit. Null otherwise. */
+    private String rejectionReason;
 
     public String getCreatedBy() {
         return createdBy;
@@ -104,5 +106,13 @@ public class Drive extends TenantAwareDocument {
 
     public void setStatus(DriveStatus status) {
         this.status = status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

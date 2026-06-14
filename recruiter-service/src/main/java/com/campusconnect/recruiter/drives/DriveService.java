@@ -53,12 +53,12 @@ public class DriveService {
         return DriveResponse.of(driveRepository.save(drive));
     }
 
-    /** Update one of the caller's own drives — only while DRAFT (full replace of editable fields). */
+    /** Update one of the caller's own drives — only while editable (DRAFT or admin-rejected). Full replace. */
     public DriveResponse update(String id, DriveRequest request) {
         Drive drive = loadMyDrive(id);
-        if (drive.getStatus() != DriveStatus.DRAFT) {
+        if (!isEditableStatus(drive.getStatus())) {
             throw new BusinessException(ErrorCode.ILLEGAL_STATE_TRANSITION,
-                    "Only a draft drive can be edited.");
+                    "Only a draft or rejected drive can be edited.");
         }
         apply(request, drive);
         validateAgainstTenant(drive);
@@ -73,9 +73,9 @@ public class DriveService {
      */
     public DriveResponse submit(String id) {
         Drive drive = loadMyDrive(id);
-        if (drive.getStatus() != DriveStatus.DRAFT) {
+        if (!isEditableStatus(drive.getStatus())) {
             throw new BusinessException(ErrorCode.ILLEGAL_STATE_TRANSITION,
-                    "Only a draft drive can be submitted.");
+                    "Only a draft or rejected drive can be submitted.");
         }
         if (!isSubmittable(drive)) {
             throw new BusinessException(ErrorCode.DRIVE_INCOMPLETE,
@@ -84,6 +84,7 @@ public class DriveService {
         // Re-assert the create/update invariant at the promotion gate: the college may have dropped a
         // branch/batch since the draft was last saved — a stale drive must not reach the approval queue.
         validateAgainstTenant(drive);
+        drive.setRejectionReason(null); // a fresh submission clears any prior admin-rejection reason
         drive.setStatus(DriveStatus.PENDING_APPROVAL);
         return DriveResponse.of(driveRepository.save(drive));
     }
@@ -104,6 +105,11 @@ public class DriveService {
 
     private String currentRecruiterId() {
         return TenantContext.getUserId();
+    }
+
+    /** A drive is editable — and re-submittable — only in DRAFT or after an admin rejection (Story 4.3). */
+    private static boolean isEditableStatus(DriveStatus status) {
+        return status == DriveStatus.DRAFT || status == DriveStatus.REJECTED_BY_ADMIN;
     }
 
     private Drive loadMyDrive(String id) {

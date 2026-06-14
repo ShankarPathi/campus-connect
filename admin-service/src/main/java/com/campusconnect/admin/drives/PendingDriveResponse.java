@@ -1,4 +1,4 @@
-package com.campusconnect.recruiter.drives;
+package com.campusconnect.admin.drives;
 
 import com.campusconnect.common.domain.BacklogPolicy;
 import com.campusconnect.common.domain.Drive;
@@ -7,10 +7,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * The recruiter's view of one of their drives (Story 4.1). Exposes the editable fields, the
- * snapshotted {@code companyName}, and the {@code status} — never {@code tenantId} or {@code createdBy}.
+ * A College Admin's review view of a drive (Story 4.3) — the fields needed to decide publication.
+ * Exposes no {@code tenantId}; {@code rejectionReason} is null unless the drive is {@code REJECTED_BY_ADMIN}.
  */
-public record DriveResponse(
+public record PendingDriveResponse(
         String id,
         String companyName,
         String role,
@@ -25,9 +25,9 @@ public record DriveResponse(
     public record Eligibility(List<String> branches, Double minCgpa, BacklogPolicy backlogPolicy, String batch) {
     }
 
-    public static DriveResponse of(Drive d) {
+    public static PendingDriveResponse of(Drive d) {
         var e = d.getEligibility();
-        return new DriveResponse(
+        return new PendingDriveResponse(
                 d.getId(),
                 d.getCompanyName(),
                 d.getRole(),

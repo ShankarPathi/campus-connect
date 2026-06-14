@@ -1,7 +1,10 @@
 package com.campusconnect.recruiter.drives;
 
 import com.campusconnect.common.domain.AccountStatus;
+import com.campusconnect.common.domain.BacklogPolicy;
 import com.campusconnect.common.domain.Drive;
+import com.campusconnect.common.domain.DriveStatus;
+import com.campusconnect.common.domain.EligibilityCriteria;
 import com.campusconnect.common.domain.RecruiterProfile;
 import com.campusconnect.common.domain.Tenant;
 import com.campusconnect.common.domain.TenantStatus;
@@ -219,6 +222,37 @@ class DriveDraftTest {
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
     }
 
+    // ── reject / resubmit (Story 4.3) ──
+
+    @Test
+    void getDrive_whenRejected_exposesRejectionReason() throws Exception {
+        String id = seedRejectedDrive("Package below the college floor");
+        mockMvc.perform(get("/api/recruiter/drives/{id}", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED_BY_ADMIN"))
+                .andExpect(jsonPath("$.data.rejectionReason").value("Package below the college floor"));
+    }
+
+    @Test
+    void edit_whenRejected_isAllowed() throws Exception {
+        String id = seedRejectedDrive("fix the package");
+        Map<String, Object> body = fullDrive();
+        body.put("role", "SDE-2");
+        mockMvc.perform(put("/api/recruiter/drives/{id}", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("SDE-2"));
+    }
+
+    @Test
+    void submit_whenRejected_movesToPending_andClearsReason() throws Exception {
+        String id = seedRejectedDrive("too few openings");
+        mockMvc.perform(post("/api/recruiter/drives/{id}/submit", id).header(HttpHeaders.AUTHORIZATION, token(recruiterId, Role.RECRUITER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.data.rejectionReason").doesNotExist());
+    }
+
     // ── validation ──
 
     @Test
@@ -348,6 +382,28 @@ class DriveDraftTest {
         p.setCompanyName(companyName);
         mongoTemplate.save(p);
         return id;
+    }
+
+    /** Seeds a complete, admin-REJECTED drive owned by the test recruiter (Story 4.3 resubmit cases). */
+    private String seedRejectedDrive(String reason) {
+        Drive d = new Drive();
+        d.setTenantId(tenantId);
+        d.setCreatedBy(recruiterId);
+        d.setCompanyName("Acme Corp");
+        d.setRole("SDE-1");
+        d.setPackageLpa(12.0);
+        d.setLocation("Bengaluru");
+        d.setOpenings(3);
+        d.setApplyDeadline(java.time.Instant.parse("2027-01-01T00:00:00Z"));
+        EligibilityCriteria e = new EligibilityCriteria();
+        e.setBranches(new java.util.ArrayList<>(List.of("CSE", "ECE")));
+        e.setMinCgpa(7.0);
+        e.setBacklogPolicy(BacklogPolicy.NO_BACKLOG);
+        e.setBatch("2026");
+        d.setEligibility(e);
+        d.setStatus(DriveStatus.REJECTED_BY_ADMIN);
+        d.setRejectionReason(reason);
+        return mongoTemplate.save(d).getId();
     }
 
     private String json(Object value) throws Exception {

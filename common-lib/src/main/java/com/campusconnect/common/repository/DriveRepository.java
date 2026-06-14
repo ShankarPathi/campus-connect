@@ -1,6 +1,7 @@
 package com.campusconnect.common.repository;
 
 import com.campusconnect.common.domain.Drive;
+import com.campusconnect.common.domain.DriveStatus;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -35,5 +36,10 @@ public class DriveRepository extends TenantAwareRepository<Drive> {
     /** One of this recruiter's own drives by id (tenant + owner scoped) — the 404 guard for get/edit. */
     public Optional<Drive> findByIdAndCreatedBy(String id, String recruiterId) {
         return findById(id).filter(d -> recruiterId.equals(d.getCreatedBy()));
+    }
+
+    /** The current tenant's drives in a given status — backs the College-Admin review queue (Story 4.3). */
+    public List<Drive> findByStatus(DriveStatus status) {
+        return find(new Query(Criteria.where("status").is(status)));
     }
 }
