@@ -83,6 +83,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(ErrorCode.CONFLICT.status()).body(ApiResponse.error(error));
     }
 
+    /**
+     * An {@code @Version} optimistic-lock conflict — a concurrent write changed the document between
+     * load and save (e.g. a recruiter transition racing a student's withdraw). This is a legitimate
+     * client-visible race, not an internal error: → 409 {@code CONFLICT} with a retry hint, never a 500.
+     */
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<Object> handleOptimisticLock(org.springframework.dao.OptimisticLockingFailureException ex) {
+        log.warn("Optimistic-lock conflict (concurrent modification)", ex);
+        ApiError error = ApiError.of(ErrorCode.CONFLICT.name(),
+                "This item was modified at the same time by another action. Please reload and try again.");
+        return ResponseEntity.status(ErrorCode.CONFLICT.status()).body(ApiResponse.error(error));
+    }
+
     /** Anything unmapped (non-Spring, non-business) → 500 generic; real cause logged, never returned. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleUnexpected(Exception ex) {

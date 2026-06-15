@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for the {@code applications} collection (Story 5.3, read side). Extends
@@ -31,5 +32,14 @@ public class ApplicationRepository extends TenantAwareRepository<Application> {
     public boolean existsByStudentIdAndDriveId(String studentId, String driveId) {
         return !find(new Query(
                 Criteria.where("studentId").is(studentId).and("driveId").is(driveId))).isEmpty();
+    }
+
+    /**
+     * One of this student's own applications by id (tenant + owner scoped) — the 404 guard for withdraw
+     * (Story 5.5). Builds on the tenant-scoped {@code findById}, then narrows by {@code studentId}, so
+     * another student's application (same tenant) and another tenant's both resolve to empty.
+     */
+    public Optional<Application> findByIdAndStudentId(String id, String studentId) {
+        return findById(id).filter(a -> studentId.equals(a.getStudentId()));
     }
 }

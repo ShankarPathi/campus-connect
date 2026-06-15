@@ -179,6 +179,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void optimisticLock_maps409NotFiveHundred() throws Exception {
+        // A concurrent @Version conflict (e.g. a recruiter transition racing a student's withdraw) must
+        // be a clean 409, never a 500 — the payoff of the optimistic-lock save.
+        mockMvc.perform(get("/t/optimistic-lock"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value(containsString("modified")))
+                .andExpect(content().string(not(containsString("OptimisticLockingFailureException"))));
+    }
+
+    @Test
     void constraintViolation_maps400WithLeafFieldName() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         Set<ConstraintViolation<Account>> violations = validator.validate(new Account(""));
@@ -274,6 +285,12 @@ class GlobalExceptionHandlerTest {
         void dupKey() {
             // simulates a unique-index violation (e.g. a TOCTOU race) surfacing from the data layer
             throw new org.springframework.dao.DuplicateKeyException("E11000 duplicate key error: slug");
+        }
+
+        @GetMapping("/optimistic-lock")
+        void optimisticLock() {
+            // simulates a stale-@Version save (a concurrent modification) surfacing from the data layer
+            throw new org.springframework.dao.OptimisticLockingFailureException("version mismatch");
         }
     }
 }

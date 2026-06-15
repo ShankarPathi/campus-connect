@@ -21,7 +21,9 @@ public record ApplicationResponse(
 
     public static ApplicationResponse of(Application a, Drive drive) {
         return new ApplicationResponse(
-                a.getId(), a.getDriveId(), drive.getCompanyName(), drive.getRole(),
+                a.getId(), a.getDriveId(),
+                drive != null ? drive.getCompanyName() : null,
+                drive != null ? drive.getRole() : null,
                 a.getStatus(), a.getAppliedAt());
     }
 }
