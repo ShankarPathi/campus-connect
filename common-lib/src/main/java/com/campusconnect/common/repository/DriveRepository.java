@@ -52,4 +52,16 @@ public class DriveRepository extends TenantAwareRepository<Drive> {
     public List<Drive> findByStatusIn(Collection<DriveStatus> statuses) {
         return find(new Query(Criteria.where("status").in(statuses)));
     }
+
+    /**
+     * The current tenant's drives for the given ids — a single batch load (Story 5.6) that avoids an
+     * N+1 when mapping a student's applications to their drive context. Tenant-scoped via {@code find};
+     * an empty input short-circuits to no query.
+     */
+    public List<Drive> findByIdIn(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return find(new Query(Criteria.where("id").in(ids)));
+    }
 }
