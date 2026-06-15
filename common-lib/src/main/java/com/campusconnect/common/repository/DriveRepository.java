@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,5 +42,14 @@ public class DriveRepository extends TenantAwareRepository<Drive> {
     /** The current tenant's drives in a given status — backs the College-Admin review queue (Story 4.3). */
     public List<Drive> findByStatus(DriveStatus status) {
         return find(new Query(Criteria.where("status").is(status)));
+    }
+
+    /**
+     * The current tenant's drives in any of the given statuses — backs the student discovery list
+     * (Story 5.3): the discoverable set is {@code {PUBLISHED, ONGOING, CLOSED, COMPLETED}}. Tenant-scoped
+     * via {@code find}; uses the architecture's {@code {tenantId, status, applyDeadline}} index.
+     */
+    public List<Drive> findByStatusIn(Collection<DriveStatus> statuses) {
+        return find(new Query(Criteria.where("status").in(statuses)));
     }
 }

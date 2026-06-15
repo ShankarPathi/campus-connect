@@ -8,6 +8,7 @@ import com.campusconnect.common.domain.ProfileApprovalStatus;
 import com.campusconnect.common.domain.StudentProfile;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -63,6 +64,29 @@ public final class EligibilityEngine {
             }
         }
         return EligibilityResult.pass();
+    }
+
+    /**
+     * Evaluate <b>all</b> ten rules (no short-circuit) and return every rule's verdict — the
+     * transparency variant (Story 5.3, FR-13) powering the pre-apply eligibility panel. Uses the
+     * <b>same</b> ordered {@link #RULES} list as {@link #check}, so there is never a second definition
+     * of "eligible": {@code check} stops at the first failure (the apply gate), {@code checkAll} reports
+     * each rule's pass/fail for display.
+     *
+     * @return an {@link EligibilityReport} whose {@code outcomes} are in {@link RuleId} order and whose
+     *         {@code eligible} is true only when every rule passed.
+     */
+    public static EligibilityReport checkAll(EligibilityContext ctx) {
+        List<RuleOutcome> outcomes = new ArrayList<>(RULES.size());
+        boolean eligible = true;
+        for (Rule rule : RULES) {
+            Optional<String> failure = rule.evaluate().apply(ctx);
+            outcomes.add(new RuleOutcome(rule.id(), failure.isEmpty(), failure.orElse(null)));
+            if (failure.isPresent()) {
+                eligible = false;
+            }
+        }
+        return new EligibilityReport(eligible, List.copyOf(outcomes));
     }
 
     // ── The ten rules ──────────────────────────────────────────────────────────────────────────────
