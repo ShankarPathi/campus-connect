@@ -4,6 +4,8 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A placement drive posted by a recruiter (Story 4.1, FR-10). Tenant-scoped and owned by exactly one
@@ -35,6 +37,8 @@ public class Drive extends TenantAwareDocument {
     private DriveStatus status = DriveStatus.DRAFT;
     /** Set by a College-Admin rejection (Story 4.3); cleared on the recruiter's re-submit. Null otherwise. */
     private String rejectionReason;
+    /** The recruiter-defined ordered interview-round sequence (Story 6.3, FR-20). Empty until rounds are set. */
+    private List<InterviewRound> rounds = new ArrayList<>();
 
     public String getCreatedBy() {
         return createdBy;
@@ -114,5 +118,13 @@ public class Drive extends TenantAwareDocument {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    public List<InterviewRound> getRounds() {
+        return rounds;
+    }
+
+    public void setRounds(List<InterviewRound> rounds) {
+        this.rounds = rounds;
     }
 }
