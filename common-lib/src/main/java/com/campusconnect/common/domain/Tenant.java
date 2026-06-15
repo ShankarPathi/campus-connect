@@ -4,9 +4,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A college tenant. The {@code tenants} collection is the isolation root — it is NOT itself
@@ -14,7 +12,8 @@ import java.util.Map;
  * the non-tenant-aware {@code TenantRepository}.
  *
  * <p>{@code branches} and {@code batches} are embedded (small, read together). {@code placementPolicy}
- * is a loose map for now; it is typed in Story 5.2 when the eligibility engine consumes it.
+ * is the typed tenant-level eligibility policy (Story 5.2, FR-14) the {@code PolicyResolver} merges with
+ * each drive's criteria; a fresh tenant's policy is all-null (inherits every platform default).
  */
 @Document("tenants")
 public class Tenant extends BaseDocument {
@@ -27,7 +26,7 @@ public class Tenant extends BaseDocument {
     private List<String> branches = new ArrayList<>();
     private List<String> batches = new ArrayList<>();
     private Season season;
-    private Map<String, Object> placementPolicy = new LinkedHashMap<>();
+    private PlacementPolicy placementPolicy = new PlacementPolicy();
     private String plan;
     private TenantStatus status = TenantStatus.ACTIVE;
 
@@ -79,11 +78,11 @@ public class Tenant extends BaseDocument {
         this.season = season;
     }
 
-    public Map<String, Object> getPlacementPolicy() {
+    public PlacementPolicy getPlacementPolicy() {
         return placementPolicy;
     }
 
-    public void setPlacementPolicy(Map<String, Object> placementPolicy) {
+    public void setPlacementPolicy(PlacementPolicy placementPolicy) {
         this.placementPolicy = placementPolicy;
     }
 

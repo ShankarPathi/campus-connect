@@ -13,5 +13,6 @@ public enum AuditAction {
     DRIVE_APPROVED,
     DRIVE_REJECTED,
     DRIVE_EDITED,
-    DRIVE_CANCELLED
+    DRIVE_CANCELLED,
+    POLICY_EDITED
 }
