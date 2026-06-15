@@ -27,6 +27,14 @@ app:
     otp:
       limit: ${RATELIMIT_OTP_LIMIT:3}
       window: ${RATELIMIT_OTP_WINDOW:PT1H}
+  # Object storage (Story 6.1): the SAME private bucket student-service writes résumés to — recruiters read an
+  # applicant's frozen snapshot via a short-lived pre-signed URL. Construction does no network I/O (the bean is
+  # safe even where MinIO is absent, e.g. CI); signing a GET URL is a local operation.
+  storage:
+    endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
+    access-key: ${STORAGE_ACCESS_KEY:minioadmin}
+    secret-key: ${STORAGE_SECRET_KEY:minioadmin}
+    bucket: ${STORAGE_BUCKET:campus-connect}
 
 management:
   endpoints:

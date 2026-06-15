@@ -2,6 +2,7 @@ package com.campusconnect.common.domain;
 
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -19,10 +20,18 @@ import java.time.Instant;
  * serialized to a client (recruiters read it via a short-lived pre-signed URL in a later epic). The
  * {@code @Version} field is optimistic locking for the Epic 6–7 status transitions ({@code Application}
  * is the first genuinely concurrent-write collection).
+ *
+ * <p><b>Recruiter list (Story 6.1):</b> the {@code {tenantId, driveId, status}} compound index (architecture
+ * §5) backs the recruiter's applicant list — filter by status, or list all via the {@code {tenantId, driveId}}
+ * prefix. Distinct from the unique student index above (which is keyed by {@code studentId}).
  */
 @Document("applications")
-@CompoundIndex(name = "uniq_tenant_student_drive",
-        def = "{'tenantId': 1, 'studentId': 1, 'driveId': 1}", unique = true)
+@CompoundIndexes({
+        @CompoundIndex(name = "uniq_tenant_student_drive",
+                def = "{'tenantId': 1, 'studentId': 1, 'driveId': 1}", unique = true),
+        @CompoundIndex(name = "idx_tenant_drive_status",
+                def = "{'tenantId': 1, 'driveId': 1, 'status': 1}")
+})
 public class Application extends TenantAwareDocument {
 
     private String studentId;

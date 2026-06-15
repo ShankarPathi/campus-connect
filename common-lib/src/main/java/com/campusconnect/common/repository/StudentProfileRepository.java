@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,18 @@ public class StudentProfileRepository extends TenantAwareRepository<StudentProfi
     /** The current tenant's profiles in a given approval status — backs the admin review queue (Story 3.3). */
     public List<StudentProfile> findByApprovalStatus(ProfileApprovalStatus status) {
         return find(new Query(Criteria.where("profileApprovalStatus").is(status)));
+    }
+
+    /**
+     * The current tenant's profiles for the given students — a single batch load (Story 6.1) that maps a
+     * drive's applicants to their hiring profiles without an N+1. Tenant-scoped via {@code find}; an empty
+     * input short-circuits to no query.
+     */
+    public List<StudentProfile> findByStudentIdIn(Collection<String> studentIds) {
+        if (studentIds == null || studentIds.isEmpty()) {
+            return List.of();
+        }
+        return find(new Query(Criteria.where("studentId").in(studentIds)));
     }
 
     /**
