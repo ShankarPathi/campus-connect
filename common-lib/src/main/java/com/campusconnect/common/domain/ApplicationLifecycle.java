@@ -14,7 +14,7 @@ import java.util.Set;
  * applications only ever move through valid states.
  *
  * <pre>
- *   APPLIED        → UNDER_REVIEW | REJECTED | WITHDRAWN
+ *   APPLIED        → UNDER_REVIEW | SHORTLISTED | REJECTED | WITHDRAWN
  *   UNDER_REVIEW   → SHORTLISTED | REJECTED | WITHDRAWN
  *   SHORTLISTED    → INTERVIEWING | SELECTED | REJECTED
  *   INTERVIEWING   → INTERVIEWING | SELECTED | REJECTED        (multi-round, "INTERVIEWING per rounds")
@@ -27,6 +27,11 @@ import java.util.Set;
  * pre-shortlist states {@code APPLIED}/{@code UNDER_REVIEW}). The review/interview/offer forward edges are
  * the architecture's interpretation and are <b>called</b> by the Epic 6–7 stories via
  * {@link #requireTransition}; those stories refine the edges in this one place. Pure (no Spring).
+ *
+ * <p><b>Story 6.2 refinement:</b> a direct {@code APPLIED → SHORTLISTED} edge was added because the
+ * recruiter shortlists straight from the applicant list and no story produces {@code UNDER_REVIEW} (the
+ * 6.1 list is read-only). {@code UNDER_REVIEW} and {@code UNDER_REVIEW → SHORTLISTED} remain for a future
+ * "mark as reviewing" action. The withdraw guard is unaffected ({@code SHORTLISTED → WITHDRAWN} stays absent).
  */
 public final class ApplicationLifecycle {
 
@@ -35,7 +40,8 @@ public final class ApplicationLifecycle {
 
     static {
         LEGAL.put(ApplicationStatus.APPLIED, EnumSet.of(
-                ApplicationStatus.UNDER_REVIEW, ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN));
+                ApplicationStatus.UNDER_REVIEW, ApplicationStatus.SHORTLISTED,
+                ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN));
         LEGAL.put(ApplicationStatus.UNDER_REVIEW, EnumSet.of(
                 ApplicationStatus.SHORTLISTED, ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN));
         LEGAL.put(ApplicationStatus.SHORTLISTED, EnumSet.of(

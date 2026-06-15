@@ -41,6 +41,8 @@ class ApplicationLifecycleTest {
     @Test
     void canTransition_legalEdges() {
         assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.APPLIED, ApplicationStatus.UNDER_REVIEW)).isTrue();
+        // Story 6.2: shortlist straight from APPLIED (no story produces UNDER_REVIEW; 6.1 list is read-only)
+        assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.APPLIED, ApplicationStatus.SHORTLISTED)).isTrue();
         assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.UNDER_REVIEW, ApplicationStatus.SHORTLISTED)).isTrue();
         assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.SHORTLISTED, ApplicationStatus.INTERVIEWING)).isTrue();
         assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.INTERVIEWING, ApplicationStatus.INTERVIEWING)).isTrue();
@@ -50,7 +52,7 @@ class ApplicationLifecycleTest {
 
     @Test
     void canTransition_illegalEdges() {
-        assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.APPLIED, ApplicationStatus.SHORTLISTED)).isFalse();
+        assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.APPLIED, ApplicationStatus.SELECTED)).isFalse();
         assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.SHORTLISTED, ApplicationStatus.WITHDRAWN)).isFalse();
         assertThat(ApplicationLifecycle.canTransition(ApplicationStatus.WITHDRAWN, ApplicationStatus.APPLIED)).isFalse();
     }
