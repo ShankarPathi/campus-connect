@@ -62,6 +62,20 @@ public class UserRepository {
         return mongoTemplate.find(query, User.class);
     }
 
+    /** Count of users of a given role within one tenant — the Story 8.4 dashboard (e.g. registered students). */
+    public long countByTenantIdAndRole(String tenantId, Role role) {
+        Query query = new Query(Criteria.where("tenantId").is(tenantId).and("role").is(role));
+        return mongoTemplate.count(query, User.class);
+    }
+
+    /** Count of users of a given role + status within one tenant — the Story 8.4 dashboard (pending recruiters). */
+    public long countByTenantIdAndRoleAndAccountStatus(String tenantId, Role role, AccountStatus status) {
+        Query query = new Query(Criteria.where("tenantId").is(tenantId)
+                .and("role").is(role)
+                .and("accountStatus").is(status));
+        return mongoTemplate.count(query, User.class);
+    }
+
     private static Query byTenantAndEmail(String tenantId, String email) {
         return new Query(Criteria.where("tenantId").is(tenantId).and("email").is(email));
     }

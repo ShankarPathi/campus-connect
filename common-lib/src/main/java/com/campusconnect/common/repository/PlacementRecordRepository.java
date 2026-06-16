@@ -37,4 +37,20 @@ public class PlacementRecordRepository extends TenantAwareRepository<PlacementRe
     public List<PlacementRecord> findByStatus(PlacementStatus status) {
         return find(new Query(Criteria.where("status").is(status)));
     }
+
+    /** Count of the current tenant's placement records in the given status — the Story 8.4 dashboard (placed = OFFICIALLY_PLACED). */
+    public long countByStatus(PlacementStatus status) {
+        return mongoTemplate.count(withTenant(new Query(Criteria.where("status").is(status))), type);
+    }
+
+    /**
+     * Count of <b>distinct students</b> with a placement record in the given status, tenant-scoped — the Story 8.4
+     * dashboard's "placed students". A record is one-per-application ({@code {tenant, applicationId}} unique), so a
+     * student placed via two applications must not be double-counted; this de-dups on {@code studentId}. A
+     * {@code findDistinct} (not a group-by aggregation pipeline — those are Story 8.5).
+     */
+    public long countDistinctStudentsByStatus(PlacementStatus status) {
+        return mongoTemplate.findDistinct(
+                withTenant(new Query(Criteria.where("status").is(status))), "studentId", type, String.class).size();
+    }
 }

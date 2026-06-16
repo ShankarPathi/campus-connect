@@ -37,6 +37,11 @@ public class StudentProfileRepository extends TenantAwareRepository<StudentProfi
         return find(new Query(Criteria.where("profileApprovalStatus").is(status)));
     }
 
+    /** Count of the current tenant's profiles in a given approval status — the Story 8.4 dashboard. */
+    public long countByApprovalStatus(ProfileApprovalStatus status) {
+        return mongoTemplate.count(withTenant(new Query(Criteria.where("profileApprovalStatus").is(status))), type);
+    }
+
     /**
      * The current tenant's profiles for the given students — a single batch load (Story 6.1) that maps a
      * drive's applicants to their hiring profiles without an N+1. Tenant-scoped via {@code find}; an empty

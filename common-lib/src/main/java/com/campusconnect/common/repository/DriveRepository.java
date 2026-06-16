@@ -44,6 +44,11 @@ public class DriveRepository extends TenantAwareRepository<Drive> {
         return find(new Query(Criteria.where("status").is(status)));
     }
 
+    /** Count of the current tenant's drives in a given status — the Story 8.4 dashboard. */
+    public long countByStatus(DriveStatus status) {
+        return mongoTemplate.count(withTenant(new Query(Criteria.where("status").is(status))), type);
+    }
+
     /**
      * The current tenant's drives in any of the given statuses — backs the student discovery list
      * (Story 5.3): the discoverable set is {@code {PUBLISHED, ONGOING, CLOSED, COMPLETED}}. Tenant-scoped
