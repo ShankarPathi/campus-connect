@@ -59,4 +59,17 @@ public class StudentProfileRepository extends TenantAwareRepository<StudentProfi
         Update update = Update.update("isLocked", locked).set("updatedAt", Instant.now());
         return mongoTemplate.updateMulti(new Query(tenantCriteria()), update, type).getModifiedCount();
     }
+
+    /**
+     * Sets {@code isPlaced} on one student's profile in the current tenant (Story 7.3 accept). A <b>targeted</b>
+     * field update (not a read-modify-write full-document save), so it touches only {@code isPlaced} (and
+     * {@code updatedAt}) and can never clobber a concurrent change to another profile field (the Story 3.4
+     * lost-update concern). Tenant-scoped via {@link #tenantCriteria()}. Returns the number modified (0 if the
+     * student has no profile).
+     */
+    public long setPlaced(String studentId, boolean placed) {
+        Query query = new Query(Criteria.where("studentId").is(studentId)).addCriteria(tenantCriteria());
+        Update update = Update.update("isPlaced", placed).set("updatedAt", Instant.now());
+        return mongoTemplate.updateFirst(query, update, type).getModifiedCount();
+    }
 }

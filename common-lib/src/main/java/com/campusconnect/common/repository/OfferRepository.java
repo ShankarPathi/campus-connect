@@ -45,4 +45,18 @@ public class OfferRepository extends TenantAwareRepository<Offer> {
                 .and("acceptanceDeadline").lte(now));
         return mongoTemplate.find(query, Offer.class);
     }
+
+    /**
+     * One offer by id <b>scoped to a student</b> (tenant + owner scoped) — the 404 guard for the student's
+     * offer view/accept/decline (Story 7.3). Builds on the tenant-scoped {@code findById}, then narrows by
+     * {@code studentId}, so another student's offer (same tenant) and another tenant's both resolve to empty.
+     */
+    public Optional<Offer> findByIdAndStudentId(String id, String studentId) {
+        return findById(id).filter(o -> studentId.equals(o.getStudentId()));
+    }
+
+    /** The current tenant's offers for one student — the student's "my offers" list (Story 7.3). */
+    public List<Offer> findByStudentId(String studentId) {
+        return find(new Query(Criteria.where("studentId").is(studentId)));
+    }
 }
