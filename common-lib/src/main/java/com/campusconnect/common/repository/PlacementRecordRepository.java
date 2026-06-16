@@ -1,6 +1,7 @@
 package com.campusconnect.common.repository;
 
 import com.campusconnect.common.domain.PlacementRecord;
+import com.campusconnect.common.domain.PlacementStatus;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -30,5 +31,10 @@ public class PlacementRecordRepository extends TenantAwareRepository<PlacementRe
     /** The current tenant's placement records for one student. */
     public List<PlacementRecord> findByStudentId(String studentId) {
         return find(new Query(Criteria.where("studentId").is(studentId)));
+    }
+
+    /** The current tenant's placement records in the given status — the admin confirmation queue (Story 7.4). */
+    public List<PlacementRecord> findByStatus(PlacementStatus status) {
+        return find(new Query(Criteria.where("status").is(status)));
     }
 }
