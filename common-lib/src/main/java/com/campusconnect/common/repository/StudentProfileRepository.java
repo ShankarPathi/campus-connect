@@ -2,7 +2,9 @@ package com.campusconnect.common.repository;
 
 import com.campusconnect.common.domain.ProfileApprovalStatus;
 import com.campusconnect.common.domain.StudentProfile;
+import com.campusconnect.common.tenancy.TenantContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -40,6 +42,19 @@ public class StudentProfileRepository extends TenantAwareRepository<StudentProfi
     /** Count of the current tenant's profiles in a given approval status — the Story 8.4 dashboard. */
     public long countByApprovalStatus(ProfileApprovalStatus status) {
         return mongoTemplate.count(withTenant(new Query(Criteria.where("profileApprovalStatus").is(status))), type);
+    }
+
+    /**
+     * The current tenant's profile count grouped by {@code academic.branch} — the Story 8.5 branch-wise report
+     * base. An aggregation pipeline: aggregations <b>bypass</b> the tenant-aware {@code find} auto-criterion, so
+     * the FIRST stage is an explicit {@code match} on the current tenant (the report's tenant-isolation spine).
+     */
+    public List<BranchCount> countAllByBranch() {
+        Aggregation agg = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("tenantId").is(TenantContext.requireTenantId())),
+                Aggregation.group("academic.branch").count().as("total"),
+                Aggregation.project("total").and("_id").as("branch"));
+        return mongoTemplate.aggregate(agg, type, BranchCount.class).getMappedResults();
     }
 
     /**

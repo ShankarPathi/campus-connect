@@ -2,7 +2,9 @@ package com.campusconnect.common.repository;
 
 import com.campusconnect.common.domain.PlacementRecord;
 import com.campusconnect.common.domain.PlacementStatus;
+import com.campusconnect.common.tenancy.TenantContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -52,5 +54,24 @@ public class PlacementRecordRepository extends TenantAwareRepository<PlacementRe
     public long countDistinctStudentsByStatus(PlacementStatus status) {
         return mongoTemplate.findDistinct(
                 withTenant(new Query(Criteria.where("status").is(status))), "studentId", type, String.class).size();
+    }
+
+    /** The distinct {@code studentId}s with a record in the given status, tenant-scoped — the Story 8.5 placed set. */
+    public List<String> findDistinctStudentIdsByStatus(PlacementStatus status) {
+        return mongoTemplate.findDistinct(
+                withTenant(new Query(Criteria.where("status").is(status))), "studentId", type, String.class);
+    }
+
+    /**
+     * Placement counts grouped by {@code company} for the given status, tenant-scoped — the Story 8.5 company-wise
+     * report (per-placement count). An aggregation pipeline: aggregations <b>bypass</b> the tenant-aware
+     * auto-criterion, so the FIRST stage is an explicit {@code match} on the current tenant + status.
+     */
+    public List<CompanyCount> countByCompanyForStatus(PlacementStatus status) {
+        Aggregation agg = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("tenantId").is(TenantContext.requireTenantId()).and("status").is(status)),
+                Aggregation.group("company").count().as("placements"),
+                Aggregation.project("placements").and("_id").as("company"));
+        return mongoTemplate.aggregate(agg, type, CompanyCount.class).getMappedResults();
     }
 }
