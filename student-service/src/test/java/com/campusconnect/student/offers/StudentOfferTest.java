@@ -104,6 +104,7 @@ class StudentOfferTest {
         mongoTemplate.remove(new Query(), Offer.class);
         mongoTemplate.remove(new Query(), PlacementRecord.class);
         mongoTemplate.remove(new Query(), StudentProfile.class);
+        mongoTemplate.remove(new Query(), com.campusconnect.common.domain.Notification.class);
         tenantId = seedTenant("vignan");
         studentId = seedUser(tenantId, "s@v.edu", Role.STUDENT);
         seedProfile(tenantId, studentId);
@@ -136,6 +137,11 @@ class StudentOfferTest {
         assertThat(pr.getJoiningDate()).isEqualTo(JOINING);
 
         assertThat(myProfile().isPlaced()).isTrue();
+
+        // Story 8.1: accepting notifies the recruiter (the drive's creator, "rec-1") in-app.
+        assertThat(mongoTemplate.find(new Query(Criteria.where("userId").is("rec-1")),
+                com.campusconnect.common.domain.Notification.class))
+                .extracting(n -> n.getType().name()).containsExactly("OFFER_ACCEPTED");
     }
 
     @Test

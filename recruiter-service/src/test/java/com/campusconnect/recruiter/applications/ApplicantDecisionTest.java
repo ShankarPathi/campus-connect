@@ -77,6 +77,7 @@ class ApplicantDecisionTest {
         mongoTemplate.remove(new Query(), Application.class);
         mongoTemplate.remove(new Query(), RecruiterProfile.class);
         mongoTemplate.remove(new Query(), AuditLog.class);
+        mongoTemplate.remove(new Query(), com.campusconnect.common.domain.Notification.class);
         tenantId = seedTenant("vignan");
         recruiterId = seedRecruiter("hr@acme.com", AccountStatus.ACTIVE);
         driveId = seedDrive(tenantId, recruiterId);
@@ -96,6 +97,11 @@ class ApplicantDecisionTest {
                 .andExpect(jsonPath("$.data.succeeded[0]").value(appId));
         assertThat(mongoTemplate.findById(appId, Application.class).getStatus()).isEqualTo(ApplicationStatus.SHORTLISTED);
         assertThat(mongoTemplate.findAll(AuditLog.class)).extracting(AuditLog::getAction).containsExactly("APPLICANT_SHORTLISTED");
+        // Story 8.1: shortlisting notifies the student in-app.
+        assertThat(mongoTemplate.findAll(com.campusconnect.common.domain.Notification.class))
+                .extracting(com.campusconnect.common.domain.Notification::getUserId,
+                        n -> n.getType().name())
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("alice", "APPLICATION_SHORTLISTED"));
     }
 
     @Test

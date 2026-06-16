@@ -5,6 +5,10 @@ import com.campusconnect.common.domain.AuditAction;
 import com.campusconnect.common.domain.PlacementLifecycle;
 import com.campusconnect.common.domain.PlacementRecord;
 import com.campusconnect.common.domain.PlacementStatus;
+import com.campusconnect.common.domain.NotificationType;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.exception.ResourceNotFoundException;
 import com.campusconnect.common.repository.PlacementRecordRepository;
 import org.springframework.stereotype.Service;
@@ -29,11 +33,13 @@ public class PlacementConfirmationService {
 
     private final PlacementRecordRepository placementRecordRepository;
     private final AuditService auditService;
+    private final EventPublisher eventPublisher;
 
     public PlacementConfirmationService(PlacementRecordRepository placementRecordRepository,
-                                        AuditService auditService) {
+                                        AuditService auditService, EventPublisher eventPublisher) {
         this.placementRecordRepository = placementRecordRepository;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** The admin's tenant's placement records in the given status — the confirmation queue. */
@@ -55,6 +61,10 @@ public class PlacementConfirmationService {
 
         auditService.record(AuditAction.PLACEMENT_CONFIRMED, ENTITY_TYPE, placementId,
                 "status=" + from, "status=" + PlacementStatus.OFFICIALLY_PLACED);
+
+        eventPublisher.publish(DomainEvent.of("PLACEMENT_CONFIRMED:" + placementId,
+                NotificationType.PLACEMENT_CONFIRMED, new NotificationRecipient(saved.getStudentId(),
+                        "Placement confirmed", "Your placement at " + saved.getCompany() + " is officially confirmed.")));
 
         return PlacementResponse.of(saved);
     }

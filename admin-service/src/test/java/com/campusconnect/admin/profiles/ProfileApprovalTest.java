@@ -41,6 +41,10 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import com.campusconnect.common.domain.Notification;
+import com.campusconnect.common.domain.NotificationType;
+import org.springframework.data.mongodb.core.query.Criteria;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -96,6 +100,7 @@ class ProfileApprovalTest {
         mongoTemplate.remove(new Query(), StudentProfile.class);
         mongoTemplate.remove(new Query(), AuditLog.class);
         mongoTemplate.remove(new Query(), Tenant.class);
+        mongoTemplate.remove(new Query(), Notification.class);
         email.clear();
         seedTenant(TENANT);
         seedActiveUser("admin-1", Role.COLLEGE_ADMIN, TENANT);
@@ -114,6 +119,11 @@ class ProfileApprovalTest {
         assertThat(audits()).extracting(AuditLog::getAction).containsExactly("PROFILE_APPROVED");
         assertThat(email.sent).hasSize(1);
         assertThat(email.sent.get(0).to()).isEqualTo("s1@v.edu");
+        // Story 8.1: the approve event writes an in-app notification to the student.
+        java.util.List<Notification> notes = mongoTemplate.find(
+                new Query(Criteria.where("userId").is("stud-1")), Notification.class);
+        assertThat(notes).hasSize(1);
+        assertThat(notes.get(0).getType()).isEqualTo(NotificationType.PROFILE_APPROVED);
     }
 
     @Test

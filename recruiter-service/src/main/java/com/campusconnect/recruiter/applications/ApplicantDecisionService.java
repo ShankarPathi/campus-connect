@@ -5,6 +5,10 @@ import com.campusconnect.common.domain.Application;
 import com.campusconnect.common.domain.ApplicationLifecycle;
 import com.campusconnect.common.domain.ApplicationStatus;
 import com.campusconnect.common.domain.AuditAction;
+import com.campusconnect.common.domain.NotificationType;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.exception.BusinessException;
 import com.campusconnect.common.exception.ResourceNotFoundException;
 import com.campusconnect.common.repository.ApplicationRepository;
@@ -38,27 +42,35 @@ public class ApplicantDecisionService {
     private final DriveRepository driveRepository;
     private final ApplicationRepository applicationRepository;
     private final AuditService auditService;
+    private final EventPublisher eventPublisher;
 
     public ApplicantDecisionService(DriveRepository driveRepository,
                                     ApplicationRepository applicationRepository,
-                                    AuditService auditService) {
+                                    AuditService auditService,
+                                    EventPublisher eventPublisher) {
         this.driveRepository = driveRepository;
         this.applicationRepository = applicationRepository;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Advance each applicant {@code → SHORTLISTED} (legal from APPLIED/UNDER_REVIEW). */
     public BulkDecisionResponse shortlist(String driveId, List<String> applicationIds) {
-        return decide(driveId, applicationIds, ApplicationStatus.SHORTLISTED, AuditAction.APPLICANT_SHORTLISTED);
+        return decide(driveId, applicationIds, ApplicationStatus.SHORTLISTED,
+                AuditAction.APPLICANT_SHORTLISTED, NotificationType.APPLICATION_SHORTLISTED,
+                "Shortlisted", "You have been shortlisted for a drive.");
     }
 
     /** Advance each applicant {@code → REJECTED} (legal from any active, pre-terminal state). */
     public BulkDecisionResponse reject(String driveId, List<String> applicationIds) {
-        return decide(driveId, applicationIds, ApplicationStatus.REJECTED, AuditAction.APPLICANT_REJECTED);
+        return decide(driveId, applicationIds, ApplicationStatus.REJECTED,
+                AuditAction.APPLICANT_REJECTED, NotificationType.APPLICATION_REJECTED,
+                "Application update", "Your application for a drive was not taken forward.");
     }
 
     private BulkDecisionResponse decide(String driveId, List<String> applicationIds,
-                                        ApplicationStatus target, AuditAction auditAction) {
+                                        ApplicationStatus target, AuditAction auditAction,
+                                        NotificationType notificationType, String title, String message) {
         requireMyDrive(driveId);
 
         List<String> succeeded = new ArrayList<>();
@@ -85,6 +97,8 @@ public class ApplicantDecisionService {
                 continue;
             }
             auditService.record(auditAction, "Application", id, "status=" + from, "status=" + target);
+            eventPublisher.publish(DomainEvent.of(notificationType.name() + ":" + id, notificationType,
+                    new NotificationRecipient(app.getStudentId(), title, message)));
             succeeded.add(id);
         }
         return BulkDecisionResponse.of(succeeded, failed);

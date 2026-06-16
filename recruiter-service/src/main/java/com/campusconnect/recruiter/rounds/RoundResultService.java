@@ -6,6 +6,10 @@ import com.campusconnect.common.domain.ApplicationLifecycle;
 import com.campusconnect.common.domain.ApplicationRound;
 import com.campusconnect.common.domain.ApplicationStatus;
 import com.campusconnect.common.domain.AuditAction;
+import com.campusconnect.common.domain.NotificationType;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.domain.Drive;
 import com.campusconnect.common.domain.RoundResult;
 import com.campusconnect.common.exception.BusinessException;
@@ -45,15 +49,18 @@ public class RoundResultService {
     private final ApplicationRepository applicationRepository;
     private final ApplicationRoundRepository applicationRoundRepository;
     private final AuditService auditService;
+    private final EventPublisher eventPublisher;
 
     public RoundResultService(DriveRepository driveRepository,
                               ApplicationRepository applicationRepository,
                               ApplicationRoundRepository applicationRoundRepository,
-                              AuditService auditService) {
+                              AuditService auditService,
+                              EventPublisher eventPublisher) {
         this.driveRepository = driveRepository;
         this.applicationRepository = applicationRepository;
         this.applicationRoundRepository = applicationRoundRepository;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     public RoundResultsResponse recordResults(String driveId, int roundOrder, List<ResultEntry> entries) {
@@ -127,6 +134,11 @@ public class RoundResultService {
             applicationRoundRepository.save(row);
             auditService.record(AuditAction.ROUND_RESULT_RECORDED, "Application", appId,
                     "round=" + roundOrder + " result=PENDING", "round=" + roundOrder + " result=" + result);
+            if (result != RoundResult.PASS) { // FAIL/ABSENT → rejected: notify the student (the deferred 6.4 notice)
+                eventPublisher.publish(DomainEvent.of("ROUND_RESULT:" + appId + ":" + roundOrder,
+                        NotificationType.ROUND_RESULT, new NotificationRecipient(app.getStudentId(),
+                                "Application update", "Your application was not taken forward after round " + roundOrder + ".")));
+            }
             succeeded.add(appId);
         }
         return RoundResultsResponse.of(succeeded, failed);

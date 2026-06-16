@@ -5,7 +5,11 @@ import com.campusconnect.common.domain.Application;
 import com.campusconnect.common.domain.ApplicationLifecycle;
 import com.campusconnect.common.domain.ApplicationStatus;
 import com.campusconnect.common.domain.AuditAction;
+import com.campusconnect.common.domain.NotificationType;
 import com.campusconnect.common.domain.Offer;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.exception.BusinessException;
 import com.campusconnect.common.exception.ResourceNotFoundException;
 import com.campusconnect.common.file.FileStorageService;
@@ -52,18 +56,21 @@ public class OfferService {
     private final FileStorageService fileStorage;
     private final AuditService auditService;
     private final long maxSizeBytes;
+    private final EventPublisher eventPublisher;
 
     public OfferService(DriveRepository driveRepository,
                         ApplicationRepository applicationRepository,
                         OfferRepository offerRepository,
                         FileStorageService fileStorage,
                         AuditService auditService,
+                        EventPublisher eventPublisher,
                         @Value("${app.offer.max-size-bytes:5242880}") long maxSizeBytes) {
         this.driveRepository = driveRepository;
         this.applicationRepository = applicationRepository;
         this.offerRepository = offerRepository;
         this.fileStorage = fileStorage;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
         this.maxSizeBytes = maxSizeBytes;
     }
 
@@ -115,6 +122,10 @@ public class OfferService {
 
         auditService.record(AuditAction.OFFER_RELEASED, "Application", applicationId,
                 "status=" + from, "status=" + ApplicationStatus.OFFER_RELEASED);
+
+        eventPublisher.publish(DomainEvent.of("OFFER_RELEASED:" + saved.getId(), NotificationType.OFFER_RELEASED,
+                new NotificationRecipient(app.getStudentId(),
+                        "Offer released", "You have received an offer (" + data.role() + "). Review and respond before the deadline.")));
 
         return OfferResponse.of(saved, fileStorage.presignedGetUrl(key, OFFER_URL_TTL));
     }

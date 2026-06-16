@@ -4,10 +4,14 @@ import com.campusconnect.common.domain.Application;
 import com.campusconnect.common.domain.ApplicationLifecycle;
 import com.campusconnect.common.domain.ApplicationStatus;
 import com.campusconnect.common.domain.Drive;
+import com.campusconnect.common.domain.NotificationType;
 import com.campusconnect.common.domain.Offer;
 import com.campusconnect.common.domain.OfferLifecycle;
 import com.campusconnect.common.domain.OfferStatus;
 import com.campusconnect.common.domain.PlacementRecord;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.exception.BusinessException;
 import com.campusconnect.common.file.FileStorageService;
 import com.campusconnect.common.repository.ApplicationRepository;
@@ -17,6 +21,8 @@ import com.campusconnect.common.repository.PlacementRecordRepository;
 import com.campusconnect.common.repository.StudentProfileRepository;
 import com.campusconnect.common.tenancy.TenantContext;
 import com.campusconnect.common.web.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -39,6 +45,7 @@ import java.util.List;
 @Service
 public class StudentOfferService {
 
+    private static final Logger log = LoggerFactory.getLogger(StudentOfferService.class);
     private static final Duration DOWNLOAD_TTL = Duration.ofMinutes(15);
 
     private final OfferRepository offerRepository;
@@ -47,19 +54,22 @@ public class StudentOfferService {
     private final StudentProfileRepository studentProfileRepository;
     private final DriveRepository driveRepository;
     private final FileStorageService fileStorage;
+    private final EventPublisher eventPublisher;
 
     public StudentOfferService(OfferRepository offerRepository,
                                ApplicationRepository applicationRepository,
                                PlacementRecordRepository placementRecordRepository,
                                StudentProfileRepository studentProfileRepository,
                                DriveRepository driveRepository,
-                               FileStorageService fileStorage) {
+                               FileStorageService fileStorage,
+                               EventPublisher eventPublisher) {
         this.offerRepository = offerRepository;
         this.applicationRepository = applicationRepository;
         this.placementRecordRepository = placementRecordRepository;
         this.studentProfileRepository = studentProfileRepository;
         this.driveRepository = driveRepository;
         this.fileStorage = fileStorage;
+        this.eventPublisher = eventPublisher;
     }
 
     /** The authenticated student's offers (newest concerns handled client-side; small set). */
@@ -91,7 +101,10 @@ public class StudentOfferService {
         flagProfilePlaced();
 
         offer.setStatus(OfferStatus.ACCEPTED);
-        return detail(offerRepository.save(offer));
+        Offer saved = offerRepository.save(offer);
+        notifyRecruiter(saved, app, NotificationType.OFFER_ACCEPTED,
+                "Offer accepted", "A candidate accepted your offer.");
+        return detail(saved);
     }
 
     /** Decline: application {@code OFFER_DECLINED} → offer {@code DECLINED} last (commit point; self-healing retry). */
@@ -100,10 +113,30 @@ public class StudentOfferService {
         requireRespondable(offer);
         OfferLifecycle.requireTransition(offer.getStatus(), OfferStatus.DECLINED);
 
-        transitionApplication(offer, ApplicationStatus.OFFER_DECLINED);
+        Application app = transitionApplication(offer, ApplicationStatus.OFFER_DECLINED);
 
         offer.setStatus(OfferStatus.DECLINED);
-        return detail(offerRepository.save(offer));
+        Offer saved = offerRepository.save(offer);
+        notifyRecruiter(saved, app, NotificationType.OFFER_DECLINED,
+                "Offer declined", "A candidate declined your offer; the seat is free again.");
+        return detail(saved);
+    }
+
+    /**
+     * Best-effort in-app notification to the recruiter who created the drive (the FR-24 "recruiter is notified" half).
+     * Fully shielded: the offer response is already committed, so neither the drive lookup nor the publish may escape
+     * and 500 a successful accept/decline.
+     */
+    private void notifyRecruiter(Offer offer, Application app, NotificationType type, String title, String message) {
+        try {
+            Drive drive = driveRepository.findById(app.getDriveId()).orElse(null);
+            if (drive != null && drive.getCreatedBy() != null) {
+                eventPublisher.publish(DomainEvent.of(type.name() + ":" + offer.getId(), type,
+                        new NotificationRecipient(drive.getCreatedBy(), title, message)));
+            }
+        } catch (RuntimeException ex) {
+            log.warn("offer-response notification skipped for offer {} ({})", offer.getId(), ex.toString());
+        }
     }
 
     // ── internals ──

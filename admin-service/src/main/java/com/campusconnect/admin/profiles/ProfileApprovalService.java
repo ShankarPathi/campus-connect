@@ -3,6 +3,10 @@ package com.campusconnect.admin.profiles;
 import com.campusconnect.common.audit.AuditService;
 import com.campusconnect.common.domain.AcademicDetails;
 import com.campusconnect.common.domain.AuditAction;
+import com.campusconnect.common.domain.NotificationType;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.domain.ProfileApprovalStatus;
 import com.campusconnect.common.domain.StudentProfile;
 import com.campusconnect.common.domain.Tenant;
@@ -41,14 +45,17 @@ public class ProfileApprovalService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final EventPublisher eventPublisher;
 
     public ProfileApprovalService(StudentProfileRepository profileRepository, TenantRepository tenantRepository,
-                                  UserRepository userRepository, EmailService emailService, AuditService auditService) {
+                                  UserRepository userRepository, EmailService emailService, AuditService auditService,
+                                  EventPublisher eventPublisher) {
         this.profileRepository = profileRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Profiles of the admin's tenant in the given approval status. */
@@ -92,6 +99,9 @@ public class ProfileApprovalService {
         notifyStudent(studentId,
                 "Your Campus Connect placement profile is approved",
                 "Your placement profile has been approved. You can now apply to eligible drives.");
+        eventPublisher.publish(DomainEvent.of("PROFILE_APPROVED:" + profile.getId(),
+                NotificationType.PROFILE_APPROVED, new NotificationRecipient(studentId,
+                        "Profile approved", "Your placement profile is approved — you can now apply to eligible drives.")));
     }
 
     /** Reject a PENDING_APPROVAL profile in the admin's tenant → REJECTED + reason; audit + notify. */
@@ -106,6 +116,9 @@ public class ProfileApprovalService {
                 "Your Campus Connect placement profile was not approved",
                 "Your placement profile was not approved.\n\nReason: %s\n\nYou can correct it and re-submit."
                         .formatted(reason));
+        eventPublisher.publish(DomainEvent.of("PROFILE_REJECTED:" + profile.getId(),
+                NotificationType.PROFILE_REJECTED, new NotificationRecipient(studentId,
+                        "Profile not approved", "Your placement profile was not approved. Reason: " + reason)));
     }
 
     /**

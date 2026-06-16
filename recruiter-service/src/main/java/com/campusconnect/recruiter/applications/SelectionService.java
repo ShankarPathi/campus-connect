@@ -6,7 +6,11 @@ import com.campusconnect.common.domain.ApplicationLifecycle;
 import com.campusconnect.common.domain.ApplicationStatus;
 import com.campusconnect.common.domain.AuditAction;
 import com.campusconnect.common.domain.Drive;
+import com.campusconnect.common.domain.NotificationType;
 import com.campusconnect.common.domain.RoundResult;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.exception.BusinessException;
 import com.campusconnect.common.exception.ResourceNotFoundException;
 import com.campusconnect.common.repository.ApplicationRepository;
@@ -42,15 +46,18 @@ public class SelectionService {
     private final ApplicationRepository applicationRepository;
     private final ApplicationRoundRepository applicationRoundRepository;
     private final AuditService auditService;
+    private final EventPublisher eventPublisher;
 
     public SelectionService(DriveRepository driveRepository,
                             ApplicationRepository applicationRepository,
                             ApplicationRoundRepository applicationRoundRepository,
-                            AuditService auditService) {
+                            AuditService auditService,
+                            EventPublisher eventPublisher) {
         this.driveRepository = driveRepository;
         this.applicationRepository = applicationRepository;
         this.applicationRoundRepository = applicationRoundRepository;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     public SelectionResponse select(String driveId, List<String> applicationIds) {
@@ -88,6 +95,9 @@ public class SelectionService {
             }
             auditService.record(AuditAction.APPLICANT_SELECTED, "Application", id,
                     "status=" + from, "status=" + ApplicationStatus.SELECTED);
+            eventPublisher.publish(DomainEvent.of("APPLICANT_SELECTED:" + id, NotificationType.APPLICANT_SELECTED,
+                    new NotificationRecipient(app.getStudentId(),
+                            "You've been selected!", "Congratulations — you have been selected in a drive. An offer may follow.")));
             succeeded.add(id);
         }
 

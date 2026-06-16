@@ -8,8 +8,16 @@ import com.campusconnect.common.domain.AuditAction;
 import com.campusconnect.common.domain.Offer;
 import com.campusconnect.common.domain.OfferLifecycle;
 import com.campusconnect.common.domain.OfferStatus;
+import com.campusconnect.common.domain.Drive;
+import com.campusconnect.common.domain.NotificationType;
+import com.campusconnect.common.events.DomainEvent;
+import com.campusconnect.common.events.EventPublisher;
+import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.repository.ApplicationRepository;
+import com.campusconnect.common.repository.DriveRepository;
 import com.campusconnect.common.repository.OfferRepository;
+
+import java.util.ArrayList;
 import com.campusconnect.common.tenancy.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,14 +51,20 @@ public class OfferExpiryService {
 
     private final OfferRepository offerRepository;
     private final ApplicationRepository applicationRepository;
+    private final DriveRepository driveRepository;
     private final AuditService auditService;
+    private final EventPublisher eventPublisher;
 
     public OfferExpiryService(OfferRepository offerRepository,
                               ApplicationRepository applicationRepository,
-                              AuditService auditService) {
+                              DriveRepository driveRepository,
+                              AuditService auditService,
+                              EventPublisher eventPublisher) {
         this.offerRepository = offerRepository;
         this.applicationRepository = applicationRepository;
+        this.driveRepository = driveRepository;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Expires every {@code PENDING} offer whose acceptance deadline is at/before {@code now}, across all tenants. */
@@ -100,5 +114,29 @@ public class OfferExpiryService {
         OfferLifecycle.requireTransition(offer.getStatus(), OfferStatus.EXPIRED);
         offer.setStatus(OfferStatus.EXPIRED);
         offerRepository.save(offer);
+
+        notifyExpired(offer, app);
+    }
+
+    /**
+     * Best-effort in-app notification to the student and (if resolvable) the recruiter that the offer lapsed.
+     * Fully shielded: the offer is already committed {@code EXPIRED}, so neither the recruiter-resolution lookup
+     * nor the publish may escape and turn a successful expiry into a {@code failed} count.
+     */
+    private void notifyExpired(Offer offer, Application app) {
+        try {
+            List<NotificationRecipient> recipients = new ArrayList<>();
+            recipients.add(new NotificationRecipient(offer.getStudentId(),
+                    "Offer expired", "An offer you had not responded to has expired."));
+            Drive drive = driveRepository.findById(app.getDriveId()).orElse(null);
+            if (drive != null && drive.getCreatedBy() != null) {
+                recipients.add(new NotificationRecipient(drive.getCreatedBy(),
+                        "Offer expired", "An offer to a candidate lapsed without a response; the seat is free again."));
+            }
+            eventPublisher.publish(DomainEvent.of("OFFER_EXPIRED:" + offer.getId(),
+                    NotificationType.OFFER_EXPIRED, recipients));
+        } catch (RuntimeException ex) {
+            log.warn("offer-expiry: notification skipped for offer {} ({})", offer.getId(), ex.toString());
+        }
     }
 }
