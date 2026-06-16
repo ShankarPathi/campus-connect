@@ -41,6 +41,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import com.campusconnect.common.domain.EmailOutbox;
+import com.campusconnect.common.domain.EmailStatus;
 import com.campusconnect.common.domain.Notification;
 import com.campusconnect.common.domain.NotificationType;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -101,6 +103,7 @@ class ProfileApprovalTest {
         mongoTemplate.remove(new Query(), AuditLog.class);
         mongoTemplate.remove(new Query(), Tenant.class);
         mongoTemplate.remove(new Query(), Notification.class);
+        mongoTemplate.remove(new Query(), EmailOutbox.class);
         email.clear();
         seedTenant(TENANT);
         seedActiveUser("admin-1", Role.COLLEGE_ADMIN, TENANT);
@@ -117,13 +120,18 @@ class ProfileApprovalTest {
 
         assertThat(profile("stud-1").getProfileApprovalStatus()).isEqualTo(ProfileApprovalStatus.APPROVED);
         assertThat(audits()).extracting(AuditLog::getAction).containsExactly("PROFILE_APPROVED");
-        assertThat(email.sent).hasSize(1);
-        assertThat(email.sent.get(0).to()).isEqualTo("s1@v.edu");
         // Story 8.1: the approve event writes an in-app notification to the student.
         java.util.List<Notification> notes = mongoTemplate.find(
                 new Query(Criteria.where("userId").is("stud-1")), Notification.class);
         assertThat(notes).hasSize(1);
         assertThat(notes.get(0).getType()).isEqualTo(NotificationType.PROFILE_APPROVED);
+        // Story 8.2: the approve event enqueues a PENDING email (resolved address) — the inline send is gone.
+        List<EmailOutbox> outbox = mongoTemplate.find(
+                new Query(Criteria.where("userId").is("stud-1")), EmailOutbox.class);
+        assertThat(outbox).hasSize(1);
+        assertThat(outbox.get(0).getToEmail()).isEqualTo("s1@v.edu");
+        assertThat(outbox.get(0).getStatus()).isEqualTo(EmailStatus.PENDING);
+        assertThat(outbox.get(0).getSubject()).isEqualTo("Profile approved");
     }
 
     @Test
@@ -141,7 +149,12 @@ class ProfileApprovalTest {
         assertThat(p.getProfileApprovalStatus()).isEqualTo(ProfileApprovalStatus.REJECTED);
         assertThat(p.getRejectionReason()).isEqualTo("CGPA does not match records");
         assertThat(audits()).extracting(AuditLog::getAction).containsExactly("PROFILE_REJECTED");
-        assertThat(email.sent.get(0).body()).contains("CGPA does not match records");
+        // Story 8.2: the reject event enqueues a PENDING email carrying the reason (inline send removed).
+        List<EmailOutbox> outbox = mongoTemplate.find(
+                new Query(Criteria.where("userId").is("stud-1")), EmailOutbox.class);
+        assertThat(outbox).hasSize(1);
+        assertThat(outbox.get(0).getStatus()).isEqualTo(EmailStatus.PENDING);
+        assertThat(outbox.get(0).getBody()).contains("CGPA does not match records");
     }
 
     @Test

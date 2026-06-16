@@ -28,6 +28,9 @@ app:
     offer-expiry:
       # Daily at 02:00. PENDING offers past their acceptance deadline -> EXPIRED (idempotent).
       cron: ${OFFER_EXPIRY_CRON:0 0 2 * * *}
+    email-outbox-flush:
+      # Every 5 minutes (Story 8.2). PENDING emailOutbox rows -> sent via SMTP (idempotent; dead-letter at 5 attempts).
+      cron: ${EMAIL_OUTBOX_FLUSH_CRON:0 */5 * * * *}
 
 management:
   endpoints:

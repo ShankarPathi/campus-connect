@@ -10,17 +10,13 @@ import com.campusconnect.common.events.NotificationRecipient;
 import com.campusconnect.common.domain.ProfileApprovalStatus;
 import com.campusconnect.common.domain.StudentProfile;
 import com.campusconnect.common.domain.Tenant;
-import com.campusconnect.common.email.EmailService;
 import com.campusconnect.common.exception.BusinessException;
 import com.campusconnect.common.exception.ResourceNotFoundException;
 import com.campusconnect.common.profile.ProfileCompletion;
 import com.campusconnect.common.repository.StudentProfileRepository;
 import com.campusconnect.common.repository.TenantRepository;
-import com.campusconnect.common.repository.UserRepository;
 import com.campusconnect.common.tenancy.TenantContext;
 import com.campusconnect.common.web.ErrorCode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,28 +28,23 @@ import java.util.Map;
  * operation is scoped to the calling admin's tenant via the tenant-aware {@link StudentProfileRepository}:
  * a profile in another tenant is simply not found (404) — the cross-tenant isolation guard, no separate
  * ownership branch. admin-service owns profile approvals (architecture §3). Decisions and edits are
- * written to the append-only audit trail; the student is notified best-effort (the 2.2 pattern).
+ * written to the append-only audit trail; the student is notified via the {@link EventPublisher} (Story 8.1
+ * in-app notification + Story 8.2 durable email outbox), replacing the former inline best-effort SMTP send.
  */
 @Service
 public class ProfileApprovalService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProfileApprovalService.class);
     private static final String ENTITY_TYPE = "StudentProfile";
 
     private final StudentProfileRepository profileRepository;
     private final TenantRepository tenantRepository;
-    private final UserRepository userRepository;
-    private final EmailService emailService;
     private final AuditService auditService;
     private final EventPublisher eventPublisher;
 
     public ProfileApprovalService(StudentProfileRepository profileRepository, TenantRepository tenantRepository,
-                                  UserRepository userRepository, EmailService emailService, AuditService auditService,
-                                  EventPublisher eventPublisher) {
+                                  AuditService auditService, EventPublisher eventPublisher) {
         this.profileRepository = profileRepository;
         this.tenantRepository = tenantRepository;
-        this.userRepository = userRepository;
-        this.emailService = emailService;
         this.auditService = auditService;
         this.eventPublisher = eventPublisher;
     }
@@ -96,9 +87,6 @@ public class ProfileApprovalService {
         profileRepository.save(profile);
         auditService.record(AuditAction.PROFILE_APPROVED, ENTITY_TYPE, profile.getId(),
                 "status=PENDING_APPROVAL", "status=APPROVED");
-        notifyStudent(studentId,
-                "Your Campus Connect placement profile is approved",
-                "Your placement profile has been approved. You can now apply to eligible drives.");
         eventPublisher.publish(DomainEvent.of("PROFILE_APPROVED:" + profile.getId(),
                 NotificationType.PROFILE_APPROVED, new NotificationRecipient(studentId,
                         "Profile approved", "Your placement profile is approved — you can now apply to eligible drives.")));
@@ -112,10 +100,6 @@ public class ProfileApprovalService {
         profileRepository.save(profile);
         auditService.record(AuditAction.PROFILE_REJECTED, ENTITY_TYPE, profile.getId(),
                 "status=PENDING_APPROVAL", "status=REJECTED; reason=" + reason);
-        notifyStudent(studentId,
-                "Your Campus Connect placement profile was not approved",
-                "Your placement profile was not approved.\n\nReason: %s\n\nYou can correct it and re-submit."
-                        .formatted(reason));
         eventPublisher.publish(DomainEvent.of("PROFILE_REJECTED:" + profile.getId(),
                 NotificationType.PROFILE_REJECTED, new NotificationRecipient(studentId,
                         "Profile not approved", "Your placement profile was not approved. Reason: " + reason)));
@@ -200,18 +184,5 @@ public class ProfileApprovalService {
                     "Profile is not awaiting approval (status: " + profile.getProfileApprovalStatus() + ")");
         }
         return profile;
-    }
-
-    /**
-     * Best-effort notification (the 2.2 pattern): the decision is already committed and authoritative, so
-     * a transient SMTP failure must not fail the request (the status is no longer PENDING_APPROVAL → a
-     * retry would 409). Epic 8 replaces this with the durable email outbox.
-     */
-    private void notifyStudent(String studentId, String subject, String body) {
-        try {
-            userRepository.findById(studentId).ifPresent(u -> emailService.sendEmail(u.getEmail(), subject, body));
-        } catch (RuntimeException ex) {
-            log.warn("Failed to send profile decision notification to student {} (decision stands)", studentId, ex);
-        }
     }
 }
