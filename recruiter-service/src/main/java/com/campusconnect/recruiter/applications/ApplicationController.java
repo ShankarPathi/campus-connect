@@ -19,7 +19,8 @@ import java.util.List;
  * Recruiter applicant-review endpoints (Story 6.1, FR-18 / NFR-3). Authenticated and restricted to RECRUITER;
  * nested under {@code /drives/{driveId}} so the owner-scoped drive load in the service is the access gate — a
  * drive that is not the recruiter's own resolves to 404, so only applicants to the caller's own drives are
- * reachable. Story 6.1 adds the read views (list + résumé URL); Story 6.2 adds the shortlist/reject writes.
+ * reachable. Story 6.1 adds the read views (list + résumé URL); Story 6.2 adds the shortlist/reject writes;
+ * Story 6.5 adds final selection.
  */
 @RestController
 @RequestMapping("/api/recruiter/drives/{driveId}/applicants")
@@ -28,11 +29,14 @@ public class ApplicationController {
 
     private final ApplicantReviewService applicantReviewService;
     private final ApplicantDecisionService applicantDecisionService;
+    private final SelectionService selectionService;
 
     public ApplicationController(ApplicantReviewService applicantReviewService,
-                                 ApplicantDecisionService applicantDecisionService) {
+                                 ApplicantDecisionService applicantDecisionService,
+                                 SelectionService selectionService) {
         this.applicantReviewService = applicantReviewService;
         this.applicantDecisionService = applicantDecisionService;
+        this.selectionService = selectionService;
     }
 
     /** Filter ({@code status}), search ({@code search} — name/roll), sort ({@code sortBy}/{@code sortDir}), page. */
@@ -68,5 +72,12 @@ public class ApplicationController {
     public ApiResponse<BulkDecisionResponse> reject(@PathVariable String driveId,
                                                     @Valid @RequestBody BulkDecisionRequest body) {
         return ApiResponse.ok(applicantDecisionService.reject(driveId, body.applicationIds()));
+    }
+
+    /** Mark final selections (Story 6.5) — single or bulk; only final-round passers; soft openings warning. */
+    @PostMapping("/select")
+    public ApiResponse<SelectionResponse> select(@PathVariable String driveId,
+                                                 @Valid @RequestBody BulkDecisionRequest body) {
+        return ApiResponse.ok(selectionService.select(driveId, body.applicationIds()));
     }
 }
