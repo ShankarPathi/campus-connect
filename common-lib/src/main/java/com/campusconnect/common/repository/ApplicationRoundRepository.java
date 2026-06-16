@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for the {@code applicationRounds} collection (Story 6.3). Extends {@link TenantAwareRepository}
@@ -40,6 +41,13 @@ public class ApplicationRoundRepository extends TenantAwareRepository<Applicatio
     public boolean existsByApplicationIdAndRoundOrder(String applicationId, int roundOrder) {
         return !find(new Query(
                 Criteria.where("applicationId").is(applicationId).and("roundOrder").is(roundOrder))).isEmpty();
+    }
+
+    /** One student's row for one round of a drive (drive + tenant scoped) — the result-recording load (Story 6.4). */
+    public Optional<ApplicationRound> findByDriveIdAndRoundOrderAndApplicationId(
+            String driveId, int roundOrder, String applicationId) {
+        return find(new Query(Criteria.where("driveId").is(driveId)
+                .and("roundOrder").is(roundOrder).and("applicationId").is(applicationId))).stream().findFirst();
     }
 
     /** The number of applicants assigned to a given round of a drive (the GET assigned-count). */
