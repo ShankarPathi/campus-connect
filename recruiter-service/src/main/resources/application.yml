@@ -9,6 +9,12 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
+  # Offer-letter upload (Story 7.1): servlet hard ceiling, set ABOVE app.offer.max-size-bytes so an oversized
+  # file reaches the service's own size check (a clean 400) instead of a raw servlet rejection.
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:10MB}
   # Email (Story 2.2): dev target is Mailpit (localhost:1025, no auth). Brevo SMTP is wired in Epic 10.
   mail:
     host: ${MAIL_HOST:localhost}
@@ -35,6 +41,10 @@ app:
     access-key: ${STORAGE_ACCESS_KEY:minioadmin}
     secret-key: ${STORAGE_SECRET_KEY:minioadmin}
     bucket: ${STORAGE_BUCKET:campus-connect}
+  # Offer-letter PDF size cap (Story 7.1): mirrors student-service app.resume.max-size-bytes. The servlet
+  # multipart ceiling above is set higher so this check (a 400 VALIDATION_ERROR) is what an oversized file hits.
+  offer:
+    max-size-bytes: ${OFFER_MAX_SIZE_BYTES:5242880}   # 5 MB
 
 management:
   endpoints:
