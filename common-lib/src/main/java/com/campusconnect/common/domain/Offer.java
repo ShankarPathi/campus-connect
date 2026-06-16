@@ -1,6 +1,7 @@
 package com.campusconnect.common.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -16,8 +17,9 @@ import java.time.Instant;
  * {@code studentId} (copied from the application — the offer is addressed to that student), and the four
  * terms (role, CTC in LPA, joining date, acceptance deadline). The {@code offerLetterKey} is <b>internal</b>
  * ({@code @JsonIgnore}) — the recruiter/student only ever receive a short-lived pre-signed URL, never the raw
- * storage key. No {@code @Version} here: 7.1 only ever inserts an offer (it never transitions one), so there
- * is no optimistic-lock concern until the offer state machine lands in 7.2/7.3.
+ * storage key. Carries {@code @Version} optimistic locking (added Story 7.2, when offers first transition):
+ * the expiry job's {@code PENDING → EXPIRED} write and the 7.3 accept/decline write are guarded against
+ * last-write-wins races, mirroring {@code Application}.
  */
 @Document("offers")
 @CompoundIndex(name = "uniq_tenant_application", def = "{'tenantId': 1, 'applicationId': 1}", unique = true)
@@ -32,6 +34,8 @@ public class Offer extends TenantAwareDocument {
     private Instant joiningDate;
     private Instant acceptanceDeadline;
     private OfferStatus status = OfferStatus.PENDING;
+    @Version
+    private Long version;
 
     public String getApplicationId() {
         return applicationId;
@@ -95,5 +99,13 @@ public class Offer extends TenantAwareDocument {
 
     public void setStatus(OfferStatus status) {
         this.status = status;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

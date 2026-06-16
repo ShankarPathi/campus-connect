@@ -23,6 +23,11 @@ app:
     otp:
       limit: ${RATELIMIT_OTP_LIMIT:3}
       window: ${RATELIMIT_OTP_WINDOW:PT1H}
+  # Scheduled jobs (Story 7.2, architecture §10). admin-service is the jobs host (@EnableScheduling).
+  jobs:
+    offer-expiry:
+      # Daily at 02:00. PENDING offers past their acceptance deadline -> EXPIRED (idempotent).
+      cron: ${OFFER_EXPIRY_CRON:0 0 2 * * *}
 
 management:
   endpoints:
