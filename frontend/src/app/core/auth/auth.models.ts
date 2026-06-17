@@ -40,3 +40,45 @@ export const PORTAL_FOR_ROLE: Record<Role, Portal | null> = {
   COLLEGE_ADMIN: 'admin',
   PLATFORM_ADMIN: null,
 };
+
+// ── Story 9.3 auth-screen request/response types (mirror the Epic-2 DTOs) ──
+
+/** Student self-registration (Story 2.1). */
+export interface RegisterStudentRequest {
+  collegeCode: string;
+  email: string;
+  password: string;
+}
+
+/** Recruiter self-registration (Story 2.2) — credentials + company details in one call. */
+export interface RegisterRecruiterRequest {
+  collegeCode: string;
+  email: string;
+  password: string;
+  companyName: string;
+  companyWebsite?: string;
+  industry?: string;
+  companyDescription?: string;
+  recruiterDesignation?: string;
+  contactPhone?: string;
+}
+
+/** Registration result (unwrapped) — never the id/hash/token. */
+export interface RegisterResponse {
+  email: string;
+  accountStatus: string;
+}
+
+/** Request a password-reset OTP (Story 2.4). */
+export interface ForgotPasswordRequest {
+  collegeCode: string;
+  email: string;
+}
+
+/** Set a new password using an emailed OTP (Story 2.4). */
+export interface ResetPasswordRequest {
+  collegeCode: string;
+  email: string;
+  otp: string;
+  newPassword: string;
+}

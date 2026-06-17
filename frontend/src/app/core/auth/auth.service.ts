@@ -3,7 +3,17 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse, Portal, RefreshResponse } from './auth.models';
+import {
+  ForgotPasswordRequest,
+  LoginRequest,
+  LoginResponse,
+  Portal,
+  RefreshResponse,
+  RegisterRecruiterRequest,
+  RegisterResponse,
+  RegisterStudentRequest,
+  ResetPasswordRequest,
+} from './auth.models';
 import { AuthStore } from './auth.store';
 
 /**
@@ -49,6 +59,31 @@ export class AuthService {
     }
     this.store.clear();
     await this.router.navigate(['/login']);
+  }
+
+  /**
+   * Self-register against a portal (Story 9.3) — student or recruiter only (admin has no self-register).
+   * Returns the unwrapped `{email, accountStatus}`; the verification email is sent server-side.
+   */
+  register(portal: Portal, body: RegisterStudentRequest | RegisterRecruiterRequest): Promise<RegisterResponse> {
+    return firstValueFrom(this.http.post<RegisterResponse>(this.authUrl(portal, 'register'), body));
+  }
+
+  /** Confirm an emailed verification token (GET, the link is clickable). Resolves on success, throws on an invalid/used token. */
+  verifyEmail(portal: Portal, token: string): Promise<boolean> {
+    return firstValueFrom(
+      this.http.get<boolean>(this.authUrl(portal, 'verify-email'), { params: { token } }),
+    );
+  }
+
+  /** Request a reset OTP (Story 2.4). The server's response is identical whether or not the account exists (anti-enumeration). */
+  forgotPassword(portal: Portal, body: ForgotPasswordRequest): Promise<boolean> {
+    return firstValueFrom(this.http.post<boolean>(this.authUrl(portal, 'password/forgot'), body));
+  }
+
+  /** Set a new password using the emailed OTP (Story 2.4). */
+  resetPassword(portal: Portal, body: ResetPasswordRequest): Promise<boolean> {
+    return firstValueFrom(this.http.post<boolean>(this.authUrl(portal, 'password/reset'), body));
   }
 
   /** App-bootstrap silent refresh: if a portal hint exists, try once to restore the session. Never throws. */

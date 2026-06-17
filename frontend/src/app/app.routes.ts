@@ -3,13 +3,30 @@ import { authGuard } from './core/guards/auth.guard';
 import { requireRole } from './core/guards/role.guard';
 
 /**
- * Root routes (Story 9.2): a public /login outside the shell, and the authenticated shell wrapping three
- * lazy, role-gated portals (CanMatch — the wrong-role/unauthenticated chunk is never downloaded).
+ * Root routes (Story 9.2; auth screens 9.3): the public auth screens outside the shell, and the
+ * authenticated shell wrapping three lazy, role-gated portals (CanMatch — the wrong-role/unauthenticated
+ * chunk is never downloaded).
  */
 export const routes: Routes = [
   {
     path: 'login',
-    loadComponent: () => import('./portals/login/login').then((m) => m.Login),
+    loadComponent: () => import('./auth/login/login').then((m) => m.Login),
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./auth/register/register').then((m) => m.Register),
+  },
+  {
+    path: 'verify-email',
+    loadComponent: () => import('./auth/verify-email/verify-email').then((m) => m.VerifyEmail),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./auth/forgot-password/forgot-password').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () => import('./auth/reset-password/reset-password').then((m) => m.ResetPassword),
   },
   {
     path: '',
