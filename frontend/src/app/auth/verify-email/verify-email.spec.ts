@@ -51,4 +51,25 @@ describe('VerifyEmail', () => {
     expect(fixture.componentInstance.state()).toBe('missing');
     mock.expectNone(() => true);
   });
+
+  it('shows a transient error with a Retry that re-runs verification (not "invalid")', async () => {
+    const fixture = setup({ token: 'tok', portal: 'student' });
+    // First attempt fails transiently (server error) → error state, NOT invalid.
+    mock.expectOne((r) => r.url === '/api/student/auth/verify-email').flush(
+      { success: false, error: { code: 'INTERNAL', message: 'x' } },
+      { status: 500, statusText: 'Server Error' },
+    );
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.state()).toBe('error');
+    expect(fixture.nativeElement.textContent).toContain('Try again');
+
+    // Retry succeeds the second time → success.
+    fixture.componentInstance.retry();
+    fixture.detectChanges();
+    mock.expectOne((r) => r.url === '/api/student/auth/verify-email').flush(true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.state()).toBe('success');
+  });
 });

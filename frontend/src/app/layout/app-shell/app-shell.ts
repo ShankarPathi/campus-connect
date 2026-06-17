@@ -40,14 +40,15 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   standalone: true,
   imports: [RouterOutlet, Topbar, SidebarNav, Toast],
   template: `
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="shell" [class.shell--drawer-open]="drawerOpen()">
-      <app-topbar (menuToggle)="toggleDrawer()" />
+      <app-topbar [menuExpanded]="drawerOpen()" (menuToggle)="toggleDrawer()" />
       <div class="body">
-        <aside class="sidebar">
+        <aside class="sidebar" id="primary-sidebar">
           <app-sidebar-nav [items]="navItems()" />
         </aside>
         <div class="scrim" (click)="closeDrawer()"></div>
-        <main class="content">
+        <main class="content" id="main-content" tabindex="-1">
           <router-outlet />
         </main>
       </div>
@@ -56,6 +57,24 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   `,
   styles: [
     `
+      .skip-link {
+        position: absolute;
+        left: var(--cc-space-2);
+        top: -48px;
+        z-index: 100;
+        padding: var(--cc-space-2) var(--cc-space-4);
+        background: var(--cc-color-primary);
+        color: var(--cc-color-text-inverse);
+        border-radius: var(--cc-radius-sm);
+        text-decoration: none;
+        transition: top 0.15s ease;
+      }
+      .skip-link:focus {
+        top: var(--cc-space-2);
+      }
+      .content:focus {
+        outline: none;
+      }
       .shell {
         min-height: 100vh;
         display: flex;

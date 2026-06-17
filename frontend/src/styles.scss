@@ -62,3 +62,24 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
+/* ── accessibility floor (Story 9.7, UX-DR10) ── */
+/* Global keyboard focus ring for any interactive element without its own focus style
+   (bare .chip / .link buttons, raw inputs/textareas/selects). Components that define their
+   own :focus-visible (Button, TextField) keep it — this is the fallback, not an override. */
+:focus-visible {
+  outline: 2px solid var(--cc-color-primary);
+  outline-offset: 2px;
+}
+
+/* Respect users who ask for less motion: neutralize non-essential transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -154,12 +154,22 @@ export class PlacementsPage {
     void this.load();
   }
 
+  /** Monotonic token so a slow earlier request can't clobber a newer one when filters switch fast (Story 9.7). */
+  private loadSeq = 0;
   async load(): Promise<void> {
+    const seq = ++this.loadSeq;
     this.state.set('loading');
     try {
-      this.rows.set(await this.svc.list(this.status()));
+      const rows = await this.svc.list(this.status());
+      if (seq !== this.loadSeq) {
+        return; // a newer load() started — discard this stale response
+      }
+      this.rows.set(rows);
       this.state.set('ready');
     } catch {
+      if (seq !== this.loadSeq) {
+        return;
+      }
       this.state.set('error');
     }
   }

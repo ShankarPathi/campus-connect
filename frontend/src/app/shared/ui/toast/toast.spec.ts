@@ -19,13 +19,18 @@ describe('ToastService + Toast', () => {
     expect(svc.toasts()[0].variant).toBe('error');
   });
 
-  it('renders queued toasts in an aria-live region', async () => {
+  it('renders success in the polite region and errors in the assertive alert region (Story 9.7)', async () => {
     const fixture = TestBed.createComponent(Toast);
     fixture.detectChanges();
     svc.success('Saved');
+    svc.error('Failed');
     fixture.detectChanges();
     await fixture.whenStable();
-    const region = fixture.nativeElement.querySelector('[aria-live="polite"]') as HTMLElement;
-    expect(region.textContent).toContain('Saved');
+
+    const polite = fixture.nativeElement.querySelector('[aria-live="polite"]') as HTMLElement;
+    const assertive = fixture.nativeElement.querySelector('[role="alert"][aria-live="assertive"]') as HTMLElement;
+    expect(polite.textContent).toContain('Saved');
+    expect(polite.textContent).not.toContain('Failed');
+    expect(assertive.textContent).toContain('Failed');
   });
 });

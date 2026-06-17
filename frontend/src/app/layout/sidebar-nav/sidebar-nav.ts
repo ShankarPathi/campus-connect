@@ -15,11 +15,15 @@ export interface NavItem {
   standalone: true,
   imports: [RouterLink, RouterLinkActive],
   template: `
-    <nav class="nav">
+    <nav class="nav" aria-label="Primary">
       @for (item of items(); track item.path) {
-        <a class="nav-link cc-body-medium" [routerLink]="item.path" routerLinkActive="nav-link--active">{{
-          item.label
-        }}</a>
+        <a
+          class="nav-link cc-body-medium"
+          [routerLink]="item.path"
+          routerLinkActive="nav-link--active"
+          ariaCurrentWhenActive="page"
+          >{{ item.label }}</a
+        >
       }
     </nav>
   `,

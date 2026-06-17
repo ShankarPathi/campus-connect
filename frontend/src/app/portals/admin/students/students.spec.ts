@@ -56,6 +56,24 @@ describe('StudentApprovalsPage', () => {
     mock.expectNone((r) => r.url === URL + '/s1' && r.method === 'PATCH');
   });
 
+  it('discards a stale filter response that resolves after a newer one (race guard, review patch)', async () => {
+    await setup();
+    const cmp = fixture.componentInstance;
+    cmp.setStatus('APPROVED'); // request A
+    cmp.setStatus('REJECTED'); // request B (newer)
+
+    const reqA = mock.expectOne((r) => r.url === URL && r.params.get('status') === 'APPROVED');
+    const reqB = mock.expectOne((r) => r.url === URL && r.params.get('status') === 'REJECTED');
+
+    // The newer request resolves first, then the stale earlier one resolves late.
+    reqB.flush([{ ...PROFILE, studentId: 'rej' }]);
+    await new Promise((r) => setTimeout(r));
+    reqA.flush([{ ...PROFILE, studentId: 'app' }]);
+    await new Promise((r) => setTimeout(r));
+
+    expect(cmp.rows().map((r) => r.studentId)).toEqual(['rej']); // B won; A was discarded
+  });
+
   it('reject requires a reason before POSTing', async () => {
     await setup();
     const cmp = fixture.componentInstance;

@@ -34,11 +34,11 @@ describe('RecruiterRounds', () => {
   it('define() PUTs the filled round and stores the response', async () => {
     await setup();
     const cmp = fixture.componentInstance;
-    cmp.roundsArray.at(0).patchValue({ name: 'Tech', schedule: '2026-07-01T10:00:00Z', venueOrLink: 'Zoom' });
+    cmp.roundsArray.at(0).patchValue({ name: 'Tech', schedule: '2099-07-01T10:00:00Z', venueOrLink: 'Zoom' });
     cmp.define();
     const put = mock.expectOne((r) => r.method === 'PUT' && r.url === URL);
     expect(put.request.body.rounds[0].name).toBe('Tech');
-    put.flush({ rounds: [{ roundOrder: 1, name: 'Tech', mode: 'ONLINE', schedule: '2026-07-01T10:00:00Z', venueOrLink: 'Zoom', assignedCount: 3 }] });
+    put.flush({ rounds: [{ roundOrder: 1, name: 'Tech', mode: 'ONLINE', schedule: '2099-07-01T10:00:00Z', venueOrLink: 'Zoom', assignedCount: 3 }] });
     await new Promise((r) => setTimeout(r));
     expect(cmp.rounds().length).toBe(1);
   });

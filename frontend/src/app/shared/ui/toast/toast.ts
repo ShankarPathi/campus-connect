@@ -1,22 +1,35 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { ToastService } from './toast.service';
 
 /**
- * Toast host (Story 9.4) — renders the `ToastService` queue in a fixed stack, announced via an ARIA
- * live region. Mounted once in the app shell. Token-styled; never color-alone (an icon + text).
+ * Toast host (Story 9.4; a11y hardening Story 9.7) — renders the `ToastService` queue in a fixed stack,
+ * announced via ARIA live regions. Success/info go to a **polite** region; errors go to an **assertive**
+ * `role="alert"` region so they interrupt and are read promptly. Mounted once in the app shell.
+ * Token-styled; never color-alone (an icon + text).
  */
 @Component({
   selector: 'app-toast',
   standalone: true,
   template: `
-    <div class="toasts" role="status" aria-live="polite" aria-atomic="false">
-      @for (t of toast.toasts(); track t.id) {
-        <div class="toast" [class]="'toast--' + t.variant">
-          <span class="toast__icon" aria-hidden="true">{{ t.variant === 'success' ? '✓' : '!' }}</span>
-          <span class="toast__text">{{ t.text }}</span>
-          <button class="toast__close" type="button" aria-label="Dismiss" (click)="toast.dismiss(t.id)">×</button>
-        </div>
-      }
+    <div class="toasts">
+      <div class="region" role="status" aria-live="polite" aria-atomic="false">
+        @for (t of politeToasts(); track t.id) {
+          <div class="toast" [class]="'toast--' + t.variant">
+            <span class="toast__icon" aria-hidden="true">{{ t.variant === 'success' ? '✓' : '!' }}</span>
+            <span class="toast__text">{{ t.text }}</span>
+            <button class="toast__close" type="button" aria-label="Dismiss" (click)="toast.dismiss(t.id)">×</button>
+          </div>
+        }
+      </div>
+      <div class="region" role="alert" aria-live="assertive" aria-atomic="false">
+        @for (t of errorToasts(); track t.id) {
+          <div class="toast toast--error">
+            <span class="toast__icon" aria-hidden="true">!</span>
+            <span class="toast__text">{{ t.text }}</span>
+            <button class="toast__close" type="button" aria-label="Dismiss" (click)="toast.dismiss(t.id)">×</button>
+          </div>
+        }
+      </div>
     </div>
   `,
   styles: [
@@ -29,6 +42,11 @@ import { ToastService } from './toast.service';
         flex-direction: column;
         gap: var(--cc-space-2);
         z-index: 1000;
+      }
+      .region {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cc-space-2);
       }
       .toast {
         display: flex;
@@ -83,4 +101,6 @@ import { ToastService } from './toast.service';
 })
 export class Toast {
   protected readonly toast = inject(ToastService);
+  protected readonly politeToasts = computed(() => this.toast.toasts().filter((t) => t.variant !== 'error'));
+  protected readonly errorToasts = computed(() => this.toast.toasts().filter((t) => t.variant === 'error'));
 }

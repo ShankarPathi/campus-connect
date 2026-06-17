@@ -40,7 +40,8 @@ describe('RecruiterOffers', () => {
     await setup();
     const cmp = fixture.componentInstance;
     cmp.openRelease(cmp.rows()[0]);
-    cmp.form.setValue({ role: 'SDE', ctc: '12', joiningDate: '2026-07-01T00:00:00Z', acceptanceDeadline: '2026-06-25T00:00:00Z' });
+    // Far-future fixed dates so futureDateTime stays valid regardless of when the suite runs (Story 9.7).
+    cmp.form.setValue({ role: 'SDE', ctc: '12', joiningDate: '2099-07-01T00:00:00Z', acceptanceDeadline: '2099-06-25T00:00:00Z' });
     cmp.onFile({ target: { files: [new File(['x'], 'o.pdf', { type: 'application/pdf' })] } } as unknown as Event);
     cmp.release();
     const post = mock.expectOne((r) => r.method === 'POST' && r.url === LIST + '/a1/offer');

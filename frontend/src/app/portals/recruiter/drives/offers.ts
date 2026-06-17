@@ -5,6 +5,7 @@ import { toAuthErrorView } from '../../../core/auth/auth.errors';
 import { ApplicantService, OfferService } from '../recruiter.services';
 import { ApplicantSummary, DriveResponse } from '../recruiter.models';
 import { applicantStatusLabel, OFFER_STATUSES } from '../recruiter.mappers';
+import { futureDateTime, positiveNumber } from '../../../shared/forms/validators';
 
 /**
  * Offers tab (Story 9.5) — release an offer (PDF + terms) to a SELECTED applicant, and track acceptance by
@@ -44,8 +45,17 @@ import { applicantStatusLabel, OFFER_STATUSES } from '../recruiter.mappers';
         }
         <label class="fl">Role<input class="inp" formControlName="role" /></label>
         <label class="fl">CTC (LPA)<input class="inp" type="text" inputmode="decimal" formControlName="ctc" /></label>
+        @if (fieldInvalid('ctc')) {
+          <p class="field-error cc-small" role="alert">Enter a CTC greater than 0.</p>
+        }
         <label class="fl">Joining date<input class="inp" formControlName="joiningDate" placeholder="YYYY-MM-DDTHH:mm:ssZ" /></label>
+        @if (fieldInvalid('joiningDate')) {
+          <p class="field-error cc-small" role="alert">Enter a valid joining date in the future.</p>
+        }
         <label class="fl">Acceptance deadline<input class="inp" formControlName="acceptanceDeadline" placeholder="YYYY-MM-DDTHH:mm:ssZ" /></label>
+        @if (fieldInvalid('acceptanceDeadline')) {
+          <p class="field-error cc-small" role="alert">Enter a valid deadline in the future.</p>
+        }
         <label class="fl">Offer letter (PDF)<input class="inp" type="file" accept="application/pdf" (change)="onFile($event)" /></label>
       </form>
       <div footer>
@@ -107,6 +117,10 @@ import { applicantStatusLabel, OFFER_STATUSES } from '../recruiter.mappers';
         background: var(--cc-color-danger-subtle);
         border-radius: var(--cc-radius-sm);
       }
+      .field-error {
+        margin: calc(var(--cc-space-1) * -1) 0 0;
+        color: var(--cc-color-danger);
+      }
       .link {
         background: none;
         border: none;
@@ -137,9 +151,9 @@ export class RecruiterOffers {
 
   readonly form = this.fb.nonNullable.group({
     role: ['', Validators.required],
-    ctc: ['', [Validators.required, Validators.pattern(/^\d*\.?\d+$/)]],
-    joiningDate: ['', Validators.required],
-    acceptanceDeadline: ['', Validators.required],
+    ctc: ['', [Validators.required, Validators.pattern(/^\d*\.?\d+$/), positiveNumber]],
+    joiningDate: ['', [Validators.required, futureDateTime]],
+    acceptanceDeadline: ['', [Validators.required, futureDateTime]],
   });
 
   constructor() {
@@ -149,6 +163,11 @@ export class RecruiterOffers {
   label = applicantStatusLabel;
   variant(s: ApplicantSummary['status']) {
     return statusToVariant(s);
+  }
+  /** True once the field is touched/dirty and currently invalid — gates its inline error message. */
+  fieldInvalid(name: 'ctc' | 'joiningDate' | 'acceptanceDeadline'): boolean {
+    const c = this.form.controls[name];
+    return (c.touched || c.dirty) && c.invalid;
   }
 
   async load(): Promise<void> {

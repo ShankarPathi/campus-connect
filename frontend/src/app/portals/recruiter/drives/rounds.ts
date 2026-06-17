@@ -5,6 +5,7 @@ import { toAuthErrorView } from '../../../core/auth/auth.errors';
 import { ApplicantService, RoundService } from '../recruiter.services';
 import { ApplicantSummary, RoundResult, RoundView } from '../recruiter.models';
 import { modeLabel } from '../recruiter.mappers';
+import { futureDateTime } from '../../../shared/forms/validators';
 
 /**
  * Interviews tab (Story 9.5) — define/replace the ordered round sequence, reschedule a round, and record
@@ -54,6 +55,9 @@ import { modeLabel } from '../recruiter.mappers';
               <input class="inp" formControlName="schedule" placeholder="YYYY-MM-DDTHH:mm:ssZ" aria-label="Schedule" />
               <input class="inp" formControlName="venueOrLink" placeholder="Venue or link" aria-label="Venue or link" />
               <app-button size="sm" variant="ghost" (click)="removeRound($index)">Remove</app-button>
+              @if (scheduleInvalid($index)) {
+                <p class="field-error cc-small" role="alert">Schedule must be a valid date in the future.</p>
+              }
             </div>
           }
         </div>
@@ -67,6 +71,9 @@ import { modeLabel } from '../recruiter.mappers';
     <app-modal [(open)]="rescheduleOpen" title="Reschedule round">
       <form class="rsform" [formGroup]="rescheduleForm">
         <input class="inp" formControlName="schedule" placeholder="YYYY-MM-DDTHH:mm:ssZ" aria-label="New schedule" />
+        @if (rescheduleScheduleInvalid()) {
+          <p class="field-error cc-small" role="alert">Schedule must be a valid date in the future.</p>
+        }
         <input class="inp" formControlName="venueOrLink" placeholder="Venue or link" aria-label="Venue or link" />
       </form>
       <div footer>
@@ -140,6 +147,11 @@ import { modeLabel } from '../recruiter.mappers';
         flex-wrap: wrap;
         gap: var(--cc-space-2);
         align-items: center;
+      }
+      .field-error {
+        flex-basis: 100%;
+        margin: 0;
+        color: var(--cc-color-danger);
       }
       .inp {
         font: var(--cc-text-body);
@@ -220,7 +232,7 @@ export class RecruiterRounds {
   private readonly results = signal<Record<string, RoundResult>>({});
 
   readonly form = this.fb.group({ rounds: this.fb.array([this.newRound()]) });
-  readonly rescheduleForm = this.fb.nonNullable.group({ schedule: ['', Validators.required], venueOrLink: [''] });
+  readonly rescheduleForm = this.fb.nonNullable.group({ schedule: ['', [Validators.required, futureDateTime]], venueOrLink: [''] });
 
   get roundsArray(): FormArray {
     return this.form.get('rounds') as FormArray;
@@ -235,11 +247,21 @@ export class RecruiterRounds {
     return new Date(iso).toLocaleString();
   }
 
+  /** Inline-error gate for a round row's schedule (touched/dirty + invalid). */
+  scheduleInvalid(index: number): boolean {
+    const c = this.roundsArray.at(index)?.get('schedule');
+    return !!c && (c.touched || c.dirty) && c.invalid;
+  }
+  rescheduleScheduleInvalid(): boolean {
+    const c = this.rescheduleForm.controls.schedule;
+    return (c.touched || c.dirty) && c.invalid;
+  }
+
   private newRound() {
     return this.fb.nonNullable.group({
       name: ['', Validators.required],
       mode: ['ONLINE'],
-      schedule: ['', Validators.required],
+      schedule: ['', [Validators.required, futureDateTime]],
       venueOrLink: ['', Validators.required],
     });
   }

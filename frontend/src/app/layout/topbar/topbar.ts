@@ -1,4 +1,4 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
@@ -16,7 +16,14 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
   imports: [RouterLink],
   template: `
     <header class="topbar">
-      <button class="icon-btn hamburger" type="button" aria-label="Toggle navigation" (click)="menuToggle.emit()">
+      <button
+        class="icon-btn hamburger"
+        type="button"
+        aria-label="Toggle navigation"
+        aria-controls="primary-sidebar"
+        [attr.aria-expanded]="menuExpanded()"
+        (click)="menuToggle.emit()"
+      >
         ☰
       </button>
       <span class="logo cc-h3">Campus Connect</span>
@@ -118,6 +125,8 @@ export class Topbar {
   protected readonly store = inject(AuthStore);
   private readonly auth = inject(AuthService);
   private readonly notifications = inject(StudentNotificationsService);
+  /** Whether the off-canvas drawer is currently open — reflected as the hamburger's aria-expanded. */
+  readonly menuExpanded = input(false);
   readonly menuToggle = output<void>();
 
   /** Unread badge count (student notifications; other portals wire their own later). */

@@ -37,34 +37,34 @@ const GROUP_LABEL: Record<EligibilityGroup, string> = {
     } @else if (state() === 'error') {
       <p class="cc-body">We couldn't load drives. <button class="link" type="button" (click)="reload()">Try again</button></p>
     } @else {
-      <app-segmented-sections [sections]="sections()" [(activeKey)]="activeKey" />
-
-      @if (visible().length === 0) {
-        <p class="empty cc-body" role="status">{{ emptyCopy() }}</p>
-      } @else {
-        <div class="grid">
-          @for (d of visible(); track d.id) {
-            <article class="card">
-              <button class="card__main" type="button" (click)="openDetail(d)">
-                <div class="card__top">
-                  <span class="cc-h3">{{ d.companyName }}</span>
-                  <app-status-pill [label]="groupLabel(d.group)" [variant]="variant(d.group)" />
-                </div>
-                <p class="cc-body muted">{{ d.role }}@if (d.packageLpa) { · ₹{{ d.packageLpa }} LPA }@if (d.location) { · {{ d.location }} }</p>
-                @if (d.applyDeadline) {
-                  <p class="cc-small muted">Apply by {{ deadline(d.applyDeadline) }}</p>
+      <app-segmented-sections [sections]="sections()" [(activeKey)]="activeKey">
+        @if (visible().length === 0) {
+          <p class="empty cc-body" role="status">{{ emptyCopy() }}</p>
+        } @else {
+          <div class="grid">
+            @for (d of visible(); track d.id) {
+              <article class="card">
+                <button class="card__main" type="button" (click)="openDetail(d)">
+                  <div class="card__top">
+                    <span class="cc-h3">{{ d.companyName }}</span>
+                    <app-status-pill [label]="groupLabel(d.group)" [variant]="variant(d.group)" />
+                  </div>
+                  <p class="cc-body muted">{{ d.role }}@if (d.packageLpa) { · ₹{{ d.packageLpa }} LPA }@if (d.location) { · {{ d.location }} }</p>
+                  @if (d.applyDeadline) {
+                    <p class="cc-small muted">Apply by {{ deadline(d.applyDeadline) }}</p>
+                  }
+                  @if (firstReason(d); as reason) {
+                    <p class="reason cc-small">{{ reason }}</p>
+                  }
+                </button>
+                @if (d.group === 'ELIGIBLE') {
+                  <app-button size="sm" [loading]="applyingId() === d.id" (click)="apply(d)">Apply</app-button>
                 }
-                @if (firstReason(d); as reason) {
-                  <p class="reason cc-small">{{ reason }}</p>
-                }
-              </button>
-              @if (d.group === 'ELIGIBLE') {
-                <app-button size="sm" [loading]="applyingId() === d.id" (click)="apply(d)">Apply</app-button>
-              }
-            </article>
-          }
-        </div>
-      }
+              </article>
+            }
+          </div>
+        }
+      </app-segmented-sections>
     }
 
     <app-modal [(open)]="detailOpen" [title]="selected()?.companyName ?? 'Drive'">
