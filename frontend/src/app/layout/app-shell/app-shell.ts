@@ -21,7 +21,11 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   ],
   COLLEGE_ADMIN: [
     { label: 'Dashboard', path: '/admin/dashboard' },
-    { label: 'Approvals', path: '/admin/approvals' },
+    { label: 'Students', path: '/admin/students' },
+    { label: 'Recruiters', path: '/admin/recruiters' },
+    { label: 'Drives', path: '/admin/drives' },
+    { label: 'Placements', path: '/admin/placements' },
+    { label: 'Eligibility', path: '/admin/eligibility' },
     { label: 'Reports', path: '/admin/reports' },
   ],
   PLATFORM_ADMIN: [],
