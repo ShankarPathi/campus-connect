@@ -16,8 +16,8 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Notifications', path: '/student/notifications' },
   ],
   RECRUITER: [
-    { label: 'Drives', path: '/recruiter/drives' },
-    { label: 'Applicants', path: '/recruiter/applicants' },
+    { label: 'Dashboard', path: '/recruiter/dashboard' },
+    { label: 'My Drives', path: '/recruiter/drives' },
   ],
   COLLEGE_ADMIN: [
     { label: 'Dashboard', path: '/admin/dashboard' },
