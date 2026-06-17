@@ -1,0 +1,68 @@
+/* Campus Connect — Modern-Trust design tokens (Story 9.1, UX-DR1).
+   The SINGLE SOURCE OF TRUTH. Every component references var(--cc-*); no hard-coded hex/px.
+   Values copied exactly from planning-artifacts/ux-designs/.../DESIGN.md. */
+
+:root {
+  /* ── Brand / indigo ── */
+  --cc-color-primary: #4F46E5;          /* primary actions, links, active nav */
+  --cc-color-primary-hover: #4338CA;
+  --cc-color-primary-subtle: #EEF2FF;   /* tints, selected rows, active-nav bg */
+
+  /* ── Surfaces / borders / text ── */
+  --cc-color-background: #FFFFFF;        /* page */
+  --cc-color-surface: #F9FAFB;          /* app shell / sidebar / muted panels */
+  --cc-color-surface-raised: #FFFFFF;   /* cards */
+  --cc-color-border: #E5E7EB;           /* hairlines, card borders, dividers */
+  --cc-color-border-strong: #D1D5DB;    /* inputs */
+  --cc-color-text: #111827;             /* primary text */
+  --cc-color-text-secondary: #4B5563;   /* secondary text */
+  --cc-color-text-muted: #9CA3AF;       /* captions, placeholders */
+
+  /* ── Semantic status (color carries meaning, never decoration) ── */
+  --cc-color-success: #16A34A;          /* ELIGIBLE, passed, placed */
+  --cc-color-success-subtle: #F0FDF4;
+  --cc-color-warning: #D97706;          /* pending / under review / closing soon */
+  --cc-color-warning-subtle: #FFFBEB;
+  --cc-color-danger: #DC2626;           /* NOT eligible, rejected, errors */
+  --cc-color-danger-subtle: #FEF2F2;
+  --cc-color-info: #2563EB;             /* informational, shortlisted */
+  --cc-color-info-subtle: #EFF6FF;
+
+  /* ── Typography ── */
+  --cc-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --cc-font-mono: ui-monospace, 'JetBrains Mono', Menlo, monospace;
+
+  /* font shorthands: weight size/line-height family */
+  --cc-text-display: 700 30px/36px var(--cc-font-sans);     /* dashboard stat numbers */
+  --cc-text-h1: 700 24px/32px var(--cc-font-sans);
+  --cc-text-h2: 600 20px/28px var(--cc-font-sans);
+  --cc-text-h3: 600 16px/24px var(--cc-font-sans);
+  --cc-text-body: 400 14px/22px var(--cc-font-sans);
+  --cc-text-body-medium: 500 14px/22px var(--cc-font-sans);
+  --cc-text-small: 400 13px/20px var(--cc-font-sans);
+  --cc-text-caption: 500 12px/16px var(--cc-font-sans);     /* labels, badges, table headers */
+
+  /* ── Radii ── */
+  --cc-radius-sm: 6px;    /* inputs, small buttons */
+  --cc-radius-md: 8px;    /* buttons, badge-chips */
+  --cc-radius-lg: 12px;   /* cards, modals, panels */
+  --cc-radius-full: 9999px; /* pills, avatars */
+
+  /* ── Spacing (4px base) ── */
+  --cc-space-1: 4px;
+  --cc-space-2: 8px;
+  --cc-space-3: 12px;
+  --cc-space-4: 16px;
+  --cc-space-5: 20px;
+  --cc-space-6: 24px;
+  --cc-space-8: 32px;
+  --cc-space-10: 40px;
+  --cc-space-12: 48px;
+  --cc-space-16: 64px;
+  --cc-gutter: 24px;
+  --cc-page-max: 1200px;
+
+  /* ── Elevation ── */
+  --cc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);   /* cards */
+  --cc-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); /* overlays */
+}

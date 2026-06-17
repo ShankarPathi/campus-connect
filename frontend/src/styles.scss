@@ -1,1 +1,64 @@
-/* You can add global styles to this file, and also import other style files */
+/* Campus Connect — global styles (Story 9.1). Tokens are the single source of truth. */
+@use 'styles/tokens';
+
+/* ── light reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font: var(--cc-text-body);
+  color: var(--cc-color-text);
+  background: var(--cc-color-background);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── type-scale utilities (global cascade reaches component DOM) ── */
+.cc-display {
+  font: var(--cc-text-display);
+}
+.cc-h1 {
+  font: var(--cc-text-h1);
+}
+.cc-h2 {
+  font: var(--cc-text-h2);
+}
+.cc-h3 {
+  font: var(--cc-text-h3);
+}
+.cc-body {
+  font: var(--cc-text-body);
+}
+.cc-body-medium {
+  font: var(--cc-text-body-medium);
+}
+.cc-small {
+  font: var(--cc-text-small);
+}
+.cc-caption {
+  font: var(--cc-text-caption);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* visually hidden but available to assistive tech */
+.cc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
