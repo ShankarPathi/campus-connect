@@ -1,14 +1,19 @@
 import { Component, inject, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
+import { StudentNotificationsService } from '../../portals/student/student.services';
 
 /**
- * App-shell topbar (Story 9.2, UX-DR2): logo + role tag, the college/tenant name, a notification bell, and a
- * profile control with logout. The hamburger emits a drawer toggle for the responsive sidebar.
+ * App-shell topbar (Story 9.2, UX-DR2): logo + role tag, the college/tenant name, a notification bell with
+ * an unread badge, and a profile control with logout. The hamburger emits a drawer toggle for the
+ * responsive sidebar. The bell badge binds to the student notifications unread signal (Story 9.4); the
+ * count is refreshed once for a student on shell load.
  */
 @Component({
   selector: 'app-topbar',
   standalone: true,
+  imports: [RouterLink],
   template: `
     <header class="topbar">
       <button class="icon-btn hamburger" type="button" aria-label="Toggle navigation" (click)="menuToggle.emit()">
@@ -22,7 +27,16 @@ import { AuthStore } from '../../core/auth/auth.store';
       @if (store.tenantName()) {
         <span class="tenant cc-body-medium" data-test="tenant-name">{{ store.tenantName() }}</span>
       }
-      <button class="icon-btn bell" type="button" aria-label="Notifications">🔔</button>
+      @if (notificationsLink(); as link) {
+        <a class="icon-btn bell" [routerLink]="link" [attr.aria-label]="bellLabel()">
+          🔔
+          @if (unread() > 0) {
+            <span class="bell__badge cc-caption" aria-hidden="true">{{ unread() > 99 ? '99+' : unread() }}</span>
+          }
+        </a>
+      } @else {
+        <span class="icon-btn bell" aria-hidden="true">🔔</span>
+      }
       <button class="logout cc-body-medium" type="button" (click)="logout()">Logout</button>
     </header>
   `,
@@ -62,6 +76,25 @@ import { AuthStore } from '../../core/auth/auth.store';
         line-height: 1;
         color: var(--cc-color-text-secondary);
       }
+      .bell {
+        position: relative;
+        text-decoration: none;
+      }
+      .bell__badge {
+        position: absolute;
+        top: -4px;
+        right: -6px;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-color-danger);
+        color: var(--cc-color-text-inverse);
+        font-size: 10px;
+      }
       .hamburger {
         display: none;
       }
@@ -84,7 +117,27 @@ import { AuthStore } from '../../core/auth/auth.store';
 export class Topbar {
   protected readonly store = inject(AuthStore);
   private readonly auth = inject(AuthService);
+  private readonly notifications = inject(StudentNotificationsService);
   readonly menuToggle = output<void>();
+
+  /** Unread badge count (student notifications; other portals wire their own later). */
+  readonly unread = this.notifications.unreadCount;
+
+  constructor() {
+    if (this.store.role() === 'STUDENT') {
+      void this.notifications.refreshUnread().catch(() => {});
+    }
+  }
+
+  /** The bell links to notifications only where a notifications screen exists (student today). */
+  notificationsLink(): string | null {
+    return this.store.role() === 'STUDENT' ? '/student/notifications' : null;
+  }
+
+  bellLabel(): string {
+    const n = this.unread();
+    return n > 0 ? `Notifications, ${n} unread` : 'Notifications';
+  }
 
   logout(): void {
     void this.auth.logout();

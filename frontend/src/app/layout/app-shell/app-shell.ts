@@ -4,13 +4,16 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { Role } from '../../core/auth/auth.models';
 import { NavItem, SidebarNav } from '../sidebar-nav/sidebar-nav';
 import { Topbar } from '../topbar/topbar';
+import { Toast } from '../../shared/ui';
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   STUDENT: [
+    { label: 'Dashboard', path: '/student/dashboard' },
     { label: 'Drives', path: '/student/drives' },
     { label: 'My Applications', path: '/student/applications' },
-    { label: 'Notifications', path: '/student/notifications' },
     { label: 'Profile', path: '/student/profile' },
+    { label: 'Offers', path: '/student/offers' },
+    { label: 'Notifications', path: '/student/notifications' },
   ],
   RECRUITER: [
     { label: 'Drives', path: '/recruiter/drives' },
@@ -31,7 +34,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, Topbar, SidebarNav],
+  imports: [RouterOutlet, Topbar, SidebarNav, Toast],
   template: `
     <div class="shell" [class.shell--drawer-open]="drawerOpen()">
       <app-topbar (menuToggle)="toggleDrawer()" />
@@ -45,6 +48,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
         </main>
       </div>
     </div>
+    <app-toast />
   `,
   styles: [
     `

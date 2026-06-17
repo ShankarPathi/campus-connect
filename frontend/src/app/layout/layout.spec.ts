@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
@@ -5,6 +6,10 @@ import { Topbar } from './topbar/topbar';
 import { AppShell } from './app-shell/app-shell';
 import { AuthStore } from '../core/auth/auth.store';
 import { AuthService } from '../core/auth/auth.service';
+import { StudentNotificationsService } from '../portals/student/student.services';
+
+// The topbar bell binds to the student notifications unread signal; stub it (no HTTP in these layout tests).
+const notificationsStub = { unreadCount: signal(0), refreshUnread: () => Promise.resolve(0) };
 
 function jwt(claims: object): string {
   const b64 = (o: object) =>
@@ -20,7 +25,11 @@ describe('Topbar', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Topbar],
-      providers: [provideRouter([]), { provide: AuthService, useValue: { logout } }],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { logout } },
+        { provide: StudentNotificationsService, useValue: notificationsStub },
+      ],
     }).compileComponents();
     store = TestBed.inject(AuthStore);
     store.setSession(jwt({ sub: 'u1', role: 'STUDENT', tenantId: 'vignan' }), 'student');
@@ -44,7 +53,11 @@ describe('AppShell', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AppShell],
-      providers: [provideRouter([]), { provide: AuthService, useValue: { logout: vi.fn() } }],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { logout: vi.fn() } },
+        { provide: StudentNotificationsService, useValue: notificationsStub },
+      ],
     }).compileComponents();
     store = TestBed.inject(AuthStore);
   });
@@ -55,7 +68,7 @@ describe('AppShell', () => {
     await fixture.whenStable();
 
     const links = fixture.nativeElement.querySelectorAll('.nav-link');
-    expect(links.length).toBe(4); // student nav
+    expect(links.length).toBe(6); // student nav: Dashboard · Drives · My Applications · Profile · Offers · Notifications
     expect(fixture.componentInstance.drawerOpen()).toBe(false);
     fixture.componentInstance.toggleDrawer();
     expect(fixture.componentInstance.drawerOpen()).toBe(true);
