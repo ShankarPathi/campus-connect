@@ -20,6 +20,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch: # manual "Run workflow" button in the Actions tab (Jenkins-style trigger)
 
 permissions:
   contents: read
