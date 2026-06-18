@@ -4,9 +4,11 @@ server:
 spring:
   application:
     name: student-service
+  # Boot 4: the MongoDB connection URI binds under spring.mongodb (NOT spring.data.mongodb).
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
   # Email (Story 2.1): dev target is Mailpit (localhost:1025, no auth). Brevo SMTP is wired in Epic 10.

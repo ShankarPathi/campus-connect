@@ -53,7 +53,7 @@ class ResumeUploadTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
+        registry.add("spring.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("spring.data.mongodb.auto-index-creation", () -> "true");
         registry.add("app.storage.endpoint", MINIO::getS3URL);
         registry.add("app.storage.access-key", MINIO::getUserName);

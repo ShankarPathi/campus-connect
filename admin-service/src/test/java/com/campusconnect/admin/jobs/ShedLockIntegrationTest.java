@@ -38,7 +38,7 @@ class ShedLockIntegrationTest {
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
+        registry.add("spring.mongodb.uri", MONGO::getReplicaSetUrl);
     }
 
     @Autowired
@@ -54,8 +54,12 @@ class ShedLockIntegrationTest {
 
     @Test
     void onlyOneHolderPerLockName() {
+        // A lock name UNIQUE to this method. The AOP test below drives the real "offer-expiry" job,
+        // whose @SchedulerLock(lockAtLeastFor=PT1M) intentionally holds that lock for a minute after
+        // the body runs — so sharing the name here makes this method order-dependently flaky. This
+        // method only exercises the LockProvider mechanics, so its name is arbitrary.
         LockConfiguration cfg = new LockConfiguration(
-                Instant.now(), "offer-expiry", Duration.ofMinutes(10), Duration.ZERO);
+                Instant.now(), "provider-mechanics-test", Duration.ofMinutes(10), Duration.ZERO);
 
         Optional<SimpleLock> first = lockProvider.lock(cfg);
         assertThat(first).as("first acquisition succeeds").isPresent();

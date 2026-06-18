@@ -47,7 +47,7 @@ class StudentLoginTest {
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
+        registry.add("spring.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("spring.data.mongodb.auto-index-creation", () -> "true");
         // Story 2.5: this class makes many login calls from one IP across methods in a shared context;
         // raise the limits far above any test so the shared RateLimiter never trips here. Throttling itself

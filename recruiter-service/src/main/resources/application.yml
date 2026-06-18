@@ -4,9 +4,11 @@ server:
 spring:
   application:
     name: recruiter-service
+  # Boot 4: the MongoDB connection URI binds under spring.mongodb (NOT spring.data.mongodb).
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/campusconnect}
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
   # Offer-letter upload (Story 7.1): servlet hard ceiling, set ABOVE app.offer.max-size-bytes so an oversized

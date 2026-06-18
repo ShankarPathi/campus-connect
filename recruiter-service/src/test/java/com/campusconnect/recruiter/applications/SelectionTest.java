@@ -57,7 +57,7 @@ class SelectionTest {
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
+        registry.add("spring.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("spring.data.mongodb.auto-index-creation", () -> "true");
     }
 

@@ -29,6 +29,8 @@ jobs:
   build:
     name: Build & test (isolation + coverage gate)
     runs-on: ubuntu-latest
+    # Safety net: a misconfigured Mongo URI (or any hang) must fail fast, not idle for GitHub's 6h default.
+    timeout-minutes: 25
     # Mapped at job level so the step `if:` can read env.SONAR_TOKEN (a step's own env isn't
     # visible to its own `if`). Absent secrets resolve to '' → the Sonar step is skipped.
     env:
