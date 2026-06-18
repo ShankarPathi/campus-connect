@@ -106,6 +106,30 @@ screen), not the API.
 > Static-validated here (`docker compose config`, Caddyfile review, SPA build path); the **live deploy +
 > cert issuance is operator-run on the VM** — it needs the real VM, DNS, and open 80/443.
 
+## Operations — monitoring, backups, scheduled jobs (Story 10.4)
+
+**Scheduled jobs are now multi-instance-safe.** The two admin-service `@Scheduled` jobs (offer-expiry
+daily 02:00, email-outbox-flush every 5 min) carry `@SchedulerLock` backed by a Mongo `shedLock`
+collection — each cron tick fires **exactly once** even if admin-service ever runs >1 instance (they were
+already idempotent; ShedLock adds the concurrency guarantee).
+
+**Monitoring** (added to `docker-compose.prod.yml`, all internal on `cc-net`):
+- **Prometheus** (`:9090`) scrapes `/actuator/prometheus` on the gateway + 3 services (`micrometer-registry-prometheus`).
+- **Grafana** — Prometheus datasource auto-provisioned; first login `admin` / `${GRAFANA_ADMIN_PASSWORD}`.
+- **Uptime-Kuma** — add a monitor for `https://${DOMAIN}` to alert on downtime. (If the container can't
+  hairpin-NAT back to your own public IP, the public check may false-fail — in that case also add an
+  internal liveness monitor for `http://api-gateway:8080/actuator/health` over `cc-net`, or run the public
+  check from an external uptime service.)
+- They're not host-published; reach them via `docker compose ... port` / an SSH tunnel, or put Grafana
+  behind Caddy on a subpath if you want it public (optional). Footprint adds ~1–1.5 GB → ~4–5.5 GB / 24 GB.
+
+**Backups** — the `mongo-backup` container runs `mongodump` nightly at 02:30 into the `backups` volume and
+prunes archives older than 7 days.
+- ⚠️ **Copy backups OFF-BOX** — a dump on the same VM is not a backup (no PITR/HA on free tier):
+  `docker run --rm -v campus-connect_backups:/b -v "$PWD":/out alpine cp -r /b /out/` then rsync/scp/object-store off the VM (or cron it).
+- **Restore:** `mongorestore --uri mongodb://mongodb:27017/campusconnect --gzip --archive=/backups/cc-<date>.archive.gz --drop`
+  (run inside a container with the `backups` volume mounted).
+
 ## CI/CD pipeline (Story 10.2)
 
 `.github/workflows/ci.yml` runs on every push/PR to `main`:

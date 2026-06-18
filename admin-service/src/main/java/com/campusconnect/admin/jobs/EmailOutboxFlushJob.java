@@ -1,5 +1,6 @@
 package com.campusconnect.admin.jobs;
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ public class EmailOutboxFlushJob {
     }
 
     @Scheduled(cron = "${app.jobs.email-outbox-flush.cron:0 */5 * * * *}")
+    @SchedulerLock(name = "email-outbox-flush", lockAtMostFor = "PT4M", lockAtLeastFor = "PT30S")
     public void flushOutbox() {
         emailOutboxFlushService.flush();
     }

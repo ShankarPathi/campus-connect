@@ -1,5 +1,6 @@
 package com.campusconnect.admin.jobs;
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +22,7 @@ public class OfferExpiryJob {
     }
 
     @Scheduled(cron = "${app.jobs.offer-expiry.cron:0 0 2 * * *}")
+    @SchedulerLock(name = "offer-expiry", lockAtMostFor = "PT10M", lockAtLeastFor = "PT1M")
     public void expireOverdueOffers() {
         offerExpiryService.expireOverdueOffers(Instant.now());
     }

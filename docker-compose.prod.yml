@@ -168,8 +168,52 @@ services:
       admin-service:
         condition: service_healthy
 
-  # ── Extension seam (Story 10.4 — do NOT implement here) ──
-  # prometheus / grafana / uptime-kuma + mongo-backup (nightly mongodump + 7-day retention)
+  # ── Monitoring + backups (Story 10.4) ── (image tags: verify/bump at deploy)
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    mem_limit: 256m
+    networks: [cc-net]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    mem_limit: 256m
+    networks: [cc-net]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    mem_limit: 256m
+    networks: [cc-net]
+    volumes:
+      - uptime-kuma-data:/app/data
+
+  # Nightly mongodump + 7-day retention. Copy /backups OFF-BOX for a real backup (see DEPLOY.md).
+  mongo-backup:
+    image: mongo:8.0
+    restart: unless-stopped
+    mem_limit: 256m
+    networks: [cc-net]
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    volumes:
+      - ./backup/backup.sh:/backup.sh:ro
+      - backups:/backups
+    depends_on:
+      mongodb:
+        condition: service_healthy
 
 networks:
   cc-net:
@@ -180,3 +224,7 @@ volumes:
   minio-data:
   caddy-data:
   caddy-config:
+  prometheus-data:
+  grafana-data:
+  uptime-kuma-data:
+  backups:

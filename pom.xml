@@ -50,6 +50,9 @@
              this to 0.00 in its own pom (a thin routing module with little unit-testable logic). -->
         <jacoco.version>0.8.13</jacoco.version>
         <jacoco.min-coverage>0.50</jacoco.min-coverage>
+        <!-- ShedLock (Story 10.4): makes the admin-service @Scheduled jobs single-fire across instances.
+             6.x is the current line (verified on Maven Central); not Boot-managed, so pin it here. -->
+        <shedlock.version>6.10.0</shedlock.version>
     </properties>
 
     <dependencyManagement>

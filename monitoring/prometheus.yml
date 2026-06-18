@@ -1,0 +1,17 @@
+# Prometheus scrape config (Story 10.4). Scrapes each service's Spring Actuator Prometheus endpoint
+# over the compose network (cc-net). Internal only — never exposed publicly.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: campus-connect
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - api-gateway:8080
+          - student-service:8081
+          - recruiter-service:8082
+          - admin-service:8083
+        labels:
+          stack: campus-connect
