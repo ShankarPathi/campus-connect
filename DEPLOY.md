@@ -63,6 +63,49 @@ docker buildx build --platform linux/arm64 -f api-gateway/Dockerfile -t campus-c
 ```
 In Story 10.2 the CI pipeline builds these for arm64 and pushes them to `ghcr.io`.
 
+## Production deploy to Oracle + HTTPS (Story 10.3)
+
+The live stack: **Caddy** (auto-HTTPS + serves the Angular SPA + proxies `/api`) → `api-gateway` → 3
+services → MongoDB + MinIO, on one Oracle Always-Free ARM VM, on a **DuckDNS** subdomain. The SPA and
+the API share one origin, so there is **no CORS and no CSRF** to configure — `SameSite=Lax` cookies just
+get the `Secure` flag (`APP_AUTH_COOKIE_SECURE=true`, already wired in the compose).
+
+### One-time setup
+1. **DuckDNS:** register a subdomain at duckdns.org, point it at the VM's **public IP** (and run the
+   DuckDNS updater on the VM so it follows IP changes).
+2. **Oracle ingress for 80 + 443 — the #1 gotcha (open BOTH layers):**
+   - Oracle **Security List / NSG:** add ingress rules for TCP 80 and 443 from `0.0.0.0/0`.
+   - The **VM's own firewall** (Oracle Ubuntu ships a restrictive iptables): e.g.
+     `sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT && sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT`
+     (and persist it). HTTPS will silently fail to issue a cert if either layer blocks 80/443.
+3. **Pull access to the private images:** `docker login ghcr.io -u <github-user>` with a PAT that has
+   `read:packages` (the images were pushed by CI in Story 10.2).
+
+### Deploy
+```bash
+git clone https://github.com/<owner>/campus-connect && cd campus-connect
+cp .env.example .env        # set DOMAIN, ACME_EMAIL, GHCR_OWNER + JWT_SECRET, MINIO_*, MAIL_* (Brevo)
+docker login ghcr.io        # read:packages
+docker compose -f docker-compose.prod.yml up -d --build   # pulls service images; (re)builds the Caddy+SPA image so SPA changes are picked up
+```
+Caddy fetches the Let's Encrypt cert on first boot (needs DNS resolving + 80/443 open). The cert
+persists in the `caddy-data` volume — don't `down -v` casually or you re-request it (rate limits).
+
+### Verify (on the VM)
+```bash
+docker compose -f docker-compose.prod.yml ps          # all healthy; caddy up
+curl -I https://$DOMAIN                                # 200, valid cert (no -k needed)
+curl -s https://$DOMAIN/api/admin/auth/login -X POST -H 'content-type: application/json' \
+  -d '{"email":"x","password":"y","collegeCode":"z"}' # routed to the gateway → real JSON error
+docker stats --no-stream                              # footprint ~3GB of 24GB (monitoring adds ~1-1.5GB in 10.4)
+```
+Then open `https://$DOMAIN` — the SPA loads over HTTPS; log in and the app works end-to-end. The emailed
+verification link now points at `https://$DOMAIN/verify-email?portal=<student|recruiter>&token=…` (the SPA
+screen), not the API.
+
+> Static-validated here (`docker compose config`, Caddyfile review, SPA build path); the **live deploy +
+> cert issuance is operator-run on the VM** — it needs the real VM, DNS, and open 80/443.
+
 ## CI/CD pipeline (Story 10.2)
 
 `.github/workflows/ci.yml` runs on every push/PR to `main`:

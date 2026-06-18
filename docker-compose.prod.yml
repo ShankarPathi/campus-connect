@@ -1,13 +1,13 @@
-# Campus Connect — PRODUCTION stack (Story 10.1).
-# The full backend on one host: MongoDB + MinIO + the 4 Spring Boot services.
-# Secrets come from a sibling `.env` (see .env.example) — never hard-coded here.
+# Campus Connect — PRODUCTION stack (Story 10.1 + 10.3 deploy).
+# One host: Caddy (HTTPS + SPA) → api-gateway → 3 services → MongoDB + MinIO.
+# Secrets/config come from a sibling `.env` (see .env.example) — never hard-coded here.
 #
-#   cp .env.example .env   # then fill in real values
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   cp .env.example .env          # fill in DOMAIN, ACME_EMAIL, GHCR_OWNER + the secrets
+#   docker login ghcr.io          # to pull the private service images
+#   docker compose -f docker-compose.prod.yml up -d
 #
-# Only the API gateway publishes a host port (8080). In Story 10.3 Caddy fronts it for HTTPS and
-# serves the built SPA; in Story 10.4 prometheus/grafana/uptime-kuma + mongodump backups attach.
-# Those are the documented extension seams — NOT implemented here.
+# The service images are pulled from ghcr.io (built + pushed by CI, Story 10.2). Caddy is the only
+# public ingress (80/443). Story 10.4 attaches prometheus/grafana/uptime-kuma + mongodump backups.
 
 # Shared env for the three role services (gateway has its own block below).
 x-service-env: &service-env
@@ -16,6 +16,9 @@ x-service-env: &service-env
   SPRING_MONGODB_URI: mongodb://mongodb:27017/campusconnect
   # External SMTP must not gate container health / trigger restart loops.
   MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+  # HTTPS is terminated by Caddy → mark the refresh-token cookie Secure (Story 10.3). SameSite=Lax
+  # stays correct because the SPA is served same-origin by Caddy (no cross-origin / no CSRF needed).
+  APP_AUTH_COOKIE_SECURE: "true"
   # Fail fast if the operator forgot to populate .env (rather than silently using a weak default).
   JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (see .env.example)}
   MAIL_HOST: ${MAIL_HOST}
@@ -35,6 +38,28 @@ x-service-defaults: &service-defaults
   networks: [cc-net]
 
 services:
+  caddy:
+    # Builds the SPA and serves it + proxies /api with automatic HTTPS (Story 10.3).
+    build:
+      context: .
+      dockerfile: caddy/Dockerfile
+    image: campus-connect/caddy:latest
+    restart: unless-stopped
+    mem_limit: 128m
+    networks: [cc-net]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN must be set in .env (your DuckDNS subdomain)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set in .env (Let's Encrypt contact)}
+    volumes:
+      - caddy-data:/data   # persists the Let's Encrypt cert across restarts (avoid rate limits)
+      - caddy-config:/config
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+
   mongodb:
     image: mongo:8.0
     restart: unless-stopped
@@ -87,13 +112,10 @@ services:
 
   student-service:
     <<: *service-defaults
-    build:
-      context: .
-      dockerfile: student-service/Dockerfile
-    image: campus-connect/student-service:latest
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER must be set in .env (lowercase ghcr owner)}/campus-connect-student-service:latest
     environment:
       <<: *service-env
-      VERIFY_BASE_URL: ${STUDENT_VERIFY_BASE_URL:-http://localhost:8081/api/student/auth/verify-email}
+      VERIFY_BASE_URL: https://${DOMAIN}/verify-email?portal=student
     depends_on:
       mongodb:
         condition: service_healthy
@@ -104,13 +126,10 @@ services:
 
   recruiter-service:
     <<: *service-defaults
-    build:
-      context: .
-      dockerfile: recruiter-service/Dockerfile
-    image: campus-connect/recruiter-service:latest
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER must be set in .env (lowercase ghcr owner)}/campus-connect-recruiter-service:latest
     environment:
       <<: *service-env
-      VERIFY_BASE_URL: ${RECRUITER_VERIFY_BASE_URL:-http://localhost:8082/api/recruiter/auth/verify-email}
+      VERIFY_BASE_URL: https://${DOMAIN}/verify-email?portal=recruiter
     depends_on:
       mongodb:
         condition: service_healthy
@@ -121,10 +140,7 @@ services:
 
   admin-service:
     <<: *service-defaults
-    build:
-      context: .
-      dockerfile: admin-service/Dockerfile
-    image: campus-connect/admin-service:latest
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER must be set in .env (lowercase ghcr owner)}/campus-connect-admin-service:latest
     environment:
       <<: *service-env
     depends_on:
@@ -137,12 +153,8 @@ services:
 
   api-gateway:
     <<: *service-defaults
-    build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
-    image: campus-connect/api-gateway:latest
-    ports:
-      - "8080:8080" # the only public entry; Caddy fronts this for HTTPS in Story 10.3
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER must be set in .env (lowercase ghcr owner)}/campus-connect-api-gateway:latest
+    # No host port — Caddy is the only public ingress and reaches the gateway on cc-net.
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (see .env.example)}
       STUDENT_SERVICE_URI: http://student-service:8081
@@ -156,10 +168,8 @@ services:
       admin-service:
         condition: service_healthy
 
-  # ── Extension seams (do NOT implement here) ──
-  # caddy:       # Story 10.3 — HTTPS reverse-proxy + serves frontend/dist; depends_on api-gateway
-  # prometheus / grafana / uptime-kuma:  # Story 10.4 — monitoring
-  # mongo-backup:  # Story 10.4 — nightly mongodump + 7-day retention
+  # ── Extension seam (Story 10.4 — do NOT implement here) ──
+  # prometheus / grafana / uptime-kuma + mongo-backup (nightly mongodump + 7-day retention)
 
 networks:
   cc-net:
@@ -168,3 +178,5 @@ networks:
 volumes:
   mongo-data:
   minio-data:
+  caddy-data:
+  caddy-config:
