@@ -1,14 +1,18 @@
-# Campus Connect CI — builds the reactor and runs the full test suite, including the
-# CrossTenantIsolationTest (NFR-1 isolation gate) and the repository-level TenantAwareRepositoryTest.
-# A failing test fails the build, so a cross-tenant leak can never merge.
+# Campus Connect CI/CD (Story 10.2 — extends the Story 1.x build+isolation gate).
 #
-# Note: GitHub runners have a clean environment (no corporate Maven mirror), so `./mvnw` resolves
-# from public Maven Central via the committed wrapper — no `-s settings.xml` is needed here (that
-# override is only for the local corporate-mirror machine). ubuntu-latest provides Docker, which
-# Testcontainers needs to start a real MongoDB.
+# Pipeline on push/PR to main:
+#   build       — reactor build + full test suite (Testcontainers MongoDB), the NFR-1
+#                 CrossTenantIsolationTest gate (asserted to have actually run), the JaCoCo
+#                 coverage gate, and an optional secret-gated SonarQube scan.
+#   frontend    — Angular: npm ci + vitest (ng test) + production build.
+#   dockerfiles — hadolint on the 4 Story-10.1 Dockerfiles.
+#   publish     — push to main only, needs [build, frontend]: build + push arm64 service images
+#                 to ghcr.io. A red gate anywhere ⇒ no images published.
 #
-# Out of scope here (Story 10.2 / Epic 10): SonarQube coverage gate, image build/publish to ghcr.io,
-# frontend (Angular) build, and deployment.
+# GitHub runners have a clean environment (no corporate Maven mirror), so `./mvnw` resolves from
+# public Maven Central via the committed wrapper — no `-s settings.xml` here. ubuntu-latest provides
+# Docker, which Testcontainers needs to start a real MongoDB.
+
 name: CI
 
 on:
@@ -17,13 +21,23 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: Build & test (isolation gate)
+    name: Build & test (isolation + coverage gate)
     runs-on: ubuntu-latest
+    # Mapped at job level so the step `if:` can read env.SONAR_TOKEN (a step's own env isn't
+    # visible to its own `if`). Absent secrets resolve to '' → the Sonar step is skipped.
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for SonarQube blame/coverage attribution
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -32,7 +46,10 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Build and run the full test suite (incl. CrossTenantIsolationTest)
+      # Runs the full reactor suite (incl. CrossTenantIsolationTest) AND the JaCoCo
+      # prepare-agent/report/check executions bound to `verify` — coverage below
+      # ${jacoco.min-coverage} fails the build.
+      - name: Build, test, and enforce the coverage gate
         run: ./mvnw -B clean verify
 
       # A "mandatory gate" must fail the build if it didn't actually run. Assert the isolation test's
@@ -50,3 +67,117 @@ jobs:
             exit 1
           fi
           echo "Tenant-isolation gate executed and passed."
+
+      # Optional SonarQube CE scan — runs only when the server secrets are configured (the CE server
+      # isn't deployed until later). JaCoCo is the enforced coverage gate meanwhile. Consumes the
+      # jacoco.xml emitted above.
+      - name: SonarQube scan (if configured)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: ./mvnw -B sonar:sonar -Dsonar.host.url="$SONAR_HOST_URL"
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage
+          path: '**/target/site/jacoco/'
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (vitest via ng test)
+        run: CI=true npm test
+
+      - name: Production build
+        run: npm run build
+
+  dockerfiles:
+    name: Lint Dockerfiles (hadolint)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, student-service, recruiter-service, admin-service]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: hadolint ${{ matrix.service }}/Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ matrix.service }}/Dockerfile
+          failure-threshold: error
+
+  publish:
+    name: Build & push arm64 images to ghcr.io
+    runs-on: ubuntu-latest
+    needs: [build, frontend, dockerfiles] # any red gate (tests/coverage/isolation/frontend/lint) blocks publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [api-gateway, student-service, recruiter-service, admin-service]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ghcr requires a lowercase namespace; the GitHub owner login can contain uppercase.
+      - name: Lowercase the image owner
+        id: owner
+        run: echo "lc=${OWNER,,}" >> "$GITHUB_OUTPUT"
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Set up QEMU (arm64 emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.owner.outputs.lc }}/campus-connect-${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+
+      - name: Build & push ${{ matrix.service }} (linux/arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          platforms: linux/arm64
+          push: true
+          provenance: false # single-arch image, not a multi-arch index — plain `docker pull`/compose on the VM
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -15,6 +15,13 @@
     <name>api-gateway</name>
     <description>Edge gateway — routing, JWT pre-validation, rate-limit, CORS (port 8080)</description>
 
+    <properties>
+        <!-- Exempt the gateway from the JaCoCo coverage gate (Story 10.2): it is a thin
+             routing/config edge with little unit-testable logic. JaCoCo still reports its coverage;
+             the `check` just doesn't fail the build on it. -->
+        <jacoco.min-coverage>0.00</jacoco.min-coverage>
+    </properties>
+
     <dependencies>
         <!-- Reactive (WebFlux) gateway. This is the Boot 4 / Spring Cloud 2025.1.x artifact;
              the legacy spring-cloud-starter-gateway is the Boot 3.5 line. -->

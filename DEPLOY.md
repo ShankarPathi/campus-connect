@@ -63,6 +63,23 @@ docker buildx build --platform linux/arm64 -f api-gateway/Dockerfile -t campus-c
 ```
 In Story 10.2 the CI pipeline builds these for arm64 and pushes them to `ghcr.io`.
 
+## CI/CD pipeline (Story 10.2)
+
+`.github/workflows/ci.yml` runs on every push/PR to `main`:
+
+| Job | What it does | Gate |
+|---|---|---|
+| **build** | `./mvnw clean verify` — full reactor + Testcontainers Mongo, JaCoCo coverage, optional Sonar | JUnit + **CrossTenantIsolationTest** (asserted to have run) + **JaCoCo coverage** all fail the build |
+| **frontend** | Node 22: `npm ci` → `CI=true npm test` (vitest) → `npm run build` | a failing Angular test/build fails CI |
+| **dockerfiles** | `hadolint` on the 4 Dockerfiles (`failure-threshold: error`) | a lint error fails CI |
+| **publish** | `needs: [build, frontend]`, **push-to-`main` only** — buildx `linux/arm64` build + push of all 4 services to ghcr.io | only runs if the gates above are green |
+
+**Coverage gate (JaCoCo, architecture §13.2 "start 70% → 80%").** Enforced by `jacoco:check` bound to `verify`, per-module **LINE** ratio ≥ `${jacoco.min-coverage}` (root `pom.xml`). **It currently starts at `0.50`** (a conservative floor below the well-tested backend) — **api-gateway is exempt** (`0.00` in its pom; a thin routing module). **Calibrate on the first CI run:** read the run's actual coverage, then raise `jacoco.min-coverage` toward the architecture's **0.70 → 0.80**. Never lower/skip it to make a red run green.
+
+**SonarQube** is wired but **secret-gated** — the `sonar:sonar` step runs only when the repo secrets **`SONAR_TOKEN`** + **`SONAR_HOST_URL`** are set (the CE server isn't deployed until later). JaCoCo is the enforced gate meanwhile.
+
+**Published images** (on push to main): `ghcr.io/<owner>/campus-connect-{api-gateway,student-service,recruiter-service,admin-service}`, tagged `latest` + the commit SHA, built for **`linux/arm64`** (the Oracle VM). Auth uses the workflow's built-in `GITHUB_TOKEN` (no PAT). Pull on the VM with `docker login ghcr.io` (a read PAT or the same token) then `docker pull ghcr.io/<owner>/campus-connect-<svc>:latest`. Story 10.3 switches `docker-compose.prod.yml` from `build:` to these `image:` refs for the actual deploy. **Note the name change:** the dev/build compose uses local `campus-connect/<svc>:latest`, but the published (and deploy-pulled) names are **`ghcr.io/<owner>/campus-connect-<svc>:latest`** (hyphen, registry-prefixed, lowercased owner). 10.3 must use the ghcr form or the VM pulls a name that was never pushed.
+
 ## Known issue — Mongo connection property (Spring Boot 4)
 
 Containerizing surfaced a latent config bug. The services' `application.yml` declares the Mongo

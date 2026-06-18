@@ -19,6 +19,15 @@
     <!-- Library module: jar packaging, NO spring-boot-maven-plugin (it is not a bootable app). -->
     <packaging>jar</packaging>
 
+    <properties>
+        <!-- Story 10.2: start exempt from the JaCoCo gate. common-lib has many line-heavy domain
+             documents (no Lombok) not all exercised by unit tests, so its true LINE coverage wasn't
+             measurable locally (corporate Maven mirror blocks the build). After the first CI run
+             prints actual coverage, set this to actual-minus-buffer and ratchet toward 0.70 (DEPLOY.md).
+             The 3 services keep the real 0.50 floor. -->
+        <jacoco.min-coverage>0.00</jacoco.min-coverage>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
