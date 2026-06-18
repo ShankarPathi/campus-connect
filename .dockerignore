@@ -1,0 +1,22 @@
+# Build context hygiene (Story 10.1) — keep the image build small & reproducible.
+# Maven build artifacts (the image rebuilds these inside the build stage)
+**/target/
+# Frontend — served by Caddy in prod (Story 10.3), never inside a service image
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+# VCS / IDE / OS
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+.DS_Store
+# Local infra & secrets — must never enter an image layer
+.env
+docker-compose.yml
+docker-compose.prod.yml
+# Docs & test reports
+*.md
+postman/
+**/surefire-reports/
