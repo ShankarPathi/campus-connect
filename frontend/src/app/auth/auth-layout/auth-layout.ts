@@ -11,8 +11,11 @@ import { Component, input } from '@angular/core';
     <main class="auth">
       <section class="auth__card" role="region" [attr.aria-label]="title()">
         <div class="auth__brand">
-          <span class="auth__logo" aria-hidden="true">CC</span>
-          <span class="auth__wordmark">Campus Connect</span>
+          <img class="auth__logo" src="icon.svg" alt="" width="40" height="40" />
+          <span class="auth__brandtext">
+            <span class="auth__wordmark">CampusConnect</span>
+            <span class="auth__tagline">Connecting Talent with Opportunity</span>
+          </span>
         </div>
         <h1 class="cc-h1 auth__title">{{ title() }}</h1>
         @if (subtitle()) {
@@ -53,20 +56,23 @@ import { Component, input } from '@angular/core';
         margin-bottom: var(--cc-space-6);
       }
       .auth__logo {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
         border-radius: var(--cc-radius-md);
-        background: var(--cc-color-primary);
-        color: var(--cc-color-text-inverse);
-        font: var(--cc-text-caption);
-        letter-spacing: 0.04em;
+        flex: none;
+      }
+      .auth__brandtext {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
       }
       .auth__wordmark {
         font: var(--cc-text-h3);
         color: var(--cc-color-text);
+      }
+      .auth__tagline {
+        font: var(--cc-text-caption);
+        color: var(--cc-color-text-secondary);
       }
       .auth__title {
         margin: 0;

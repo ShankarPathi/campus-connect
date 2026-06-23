@@ -26,7 +26,10 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
       >
         ☰
       </button>
-      <span class="logo cc-h3">Campus Connect</span>
+      <span class="brand">
+        <img class="brand__logo" src="icon.svg" alt="" width="28" height="28" />
+        <span class="logo cc-h3">CampusConnect</span>
+      </span>
       @if (store.role()) {
         <span class="role-tag cc-caption">{{ store.role() }}</span>
       }
@@ -57,6 +60,14 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
         padding: 0 var(--cc-gutter);
         background: var(--cc-color-surface-raised);
         border-bottom: 1px solid var(--cc-color-border);
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--cc-space-2);
+      }
+      .brand__logo {
+        border-radius: var(--cc-radius-sm);
       }
       .logo {
         color: var(--cc-color-primary);

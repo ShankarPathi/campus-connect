@@ -1,0 +1,18 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CampusConnect">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <!-- mortarboard top -->
+  <path d="M256 150 L426 214 L256 278 L86 214 Z" fill="#ffffff"/>
+  <!-- cap bowl under the board -->
+  <path d="M166 240 v74 c0 28 40 48 90 48 s90 -20 90 -48 v-74 l-90 34 z" fill="#ffffff" opacity="0.9"/>
+  <!-- tassel cord + bead (the 'opportunity' accent) -->
+  <path d="M426 214 v92" stroke="#ffffff" stroke-width="11" stroke-linecap="round" fill="none"/>
+  <circle cx="426" cy="320" r="17" fill="#fbbf24"/>
+  <!-- connection node (the 'connect' accent) -->
+  <circle cx="256" cy="214" r="20" fill="#4338ca" stroke="#ffffff" stroke-width="8"/>
+</svg>

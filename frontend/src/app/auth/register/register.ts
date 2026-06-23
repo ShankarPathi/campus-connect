@@ -20,7 +20,7 @@ import { describeControlError } from '../field-errors';
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink, AuthLayout, PortalToggle, Button, TextField],
   template: `
-    <app-auth-layout title="Create your account" subtitle="Join your college on Campus Connect.">
+    <app-auth-layout title="Create your account" subtitle="Join your college on CampusConnect.">
       @if (done()) {
         <div class="done" aria-live="polite">
           <p class="cc-body">We sent a verification link to <strong>{{ done()!.email }}</strong>.</p>

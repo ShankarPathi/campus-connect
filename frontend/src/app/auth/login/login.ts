@@ -20,7 +20,7 @@ import { describeControlError } from '../field-errors';
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink, AuthLayout, PortalToggle, Button, TextField],
   template: `
-    <app-auth-layout title="Sign in" subtitle="Welcome back to Campus Connect.">
+    <app-auth-layout title="Sign in" subtitle="Welcome back to CampusConnect.">
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <app-portal-toggle [(value)]="portal" />
 
