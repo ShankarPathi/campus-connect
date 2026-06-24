@@ -4,6 +4,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 export interface NavItem {
   label: string;
   path: string;
+  icon?: string;
 }
 
 /**
@@ -22,7 +23,11 @@ export interface NavItem {
           [routerLink]="item.path"
           routerLinkActive="nav-link--active"
           ariaCurrentWhenActive="page"
-          >{{ item.label }}</a
+        >
+          @if (item.icon) {
+            <span class="nav-link__icon" aria-hidden="true">{{ item.icon }}</span>
+          }
+          {{ item.label }}</a
         >
       }
     </nav>
@@ -36,19 +41,31 @@ export interface NavItem {
         padding: var(--cc-space-4) var(--cc-space-3);
       }
       .nav-link {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: var(--cc-space-3);
         padding: var(--cc-space-2) var(--cc-space-3);
-        border-radius: var(--cc-radius-sm);
+        border-radius: var(--cc-radius-md);
         color: var(--cc-color-text-secondary);
         text-decoration: none;
+        transition:
+          background 0.12s ease,
+          color 0.12s ease;
+      }
+      .nav-link__icon {
+        font-size: 16px;
+        width: 20px;
+        text-align: center;
+        flex: none;
       }
       .nav-link:hover {
-        background: var(--cc-color-surface-raised);
+        background: var(--cc-color-primary-subtle);
         color: var(--cc-color-text);
       }
       .nav-link--active {
         background: var(--cc-color-primary-subtle);
         color: var(--cc-color-primary);
+        font-weight: 700;
       }
     `,
   ],

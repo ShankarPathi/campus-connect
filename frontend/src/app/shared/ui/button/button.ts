@@ -36,11 +36,28 @@ export type ButtonSize = 'sm' | 'md';
         justify-content: center;
         gap: var(--cc-space-2);
         font: var(--cc-text-body-medium);
-        border-radius: var(--cc-radius-sm);
+        font-weight: 600;
+        border-radius: var(--cc-radius-md);
         border: 1px solid transparent;
         cursor: pointer;
         white-space: nowrap;
-        transition: background-color 0.12s ease, border-color 0.12s ease;
+        transition:
+          background-color 0.12s ease,
+          border-color 0.12s ease,
+          box-shadow 0.14s ease,
+          transform 0.14s ease;
+      }
+      .btn--primary,
+      .btn--danger {
+        box-shadow: var(--cc-shadow-sm);
+      }
+      .btn--primary:hover:not(:disabled),
+      .btn--danger:hover:not(:disabled) {
+        box-shadow: var(--cc-shadow-md);
+        transform: translateY(-1px);
+      }
+      .btn:active:not(:disabled) {
+        transform: translateY(0);
       }
       .btn:disabled {
         opacity: 0.6;

@@ -12,7 +12,13 @@ import { DashboardSnapshot } from '../admin.models';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <h1 class="cc-h2">Dashboard</h1>
+    <section class="hero">
+      <div>
+        <h1 class="hero__t">Season overview</h1>
+        <p class="hero__s">Everything across your placement drive, at a glance.</p>
+      </div>
+      <span class="hero__e" aria-hidden="true">🛡️</span>
+    </section>
 
     @if (state() === 'loading') {
       <div class="grid"><div class="card sk"></div><div class="card sk"></div><div class="card sk"></div></div>
@@ -21,33 +27,57 @@ import { DashboardSnapshot } from '../admin.models';
     } @else if (snapshot(); as s) {
       <h2 class="cc-h3 section">Pending actions</h2>
       <div class="grid">
-        <a class="card tile tile--action" routerLink="/admin/students">
-          <span class="cc-display">{{ s.pendingProfileApprovals }}</span>
+        <a class="card tile tile--action tone-amber tile-tint" routerLink="/admin/students">
+          <span class="stat-chip">📝</span>
+          <span class="cc-display stat-num">{{ s.pendingProfileApprovals }}</span>
           <span class="cc-small muted">Profiles to review</span>
         </a>
-        <a class="card tile tile--action" routerLink="/admin/recruiters">
-          <span class="cc-display">{{ s.pendingRecruiterApprovals }}</span>
+        <a class="card tile tile--action tone-sky tile-tint" routerLink="/admin/recruiters">
+          <span class="stat-chip">🏢</span>
+          <span class="cc-display stat-num">{{ s.pendingRecruiterApprovals }}</span>
           <span class="cc-small muted">Recruiters to approve</span>
         </a>
-        <a class="card tile tile--action" routerLink="/admin/drives">
-          <span class="cc-display">{{ s.pendingDriveApprovals }}</span>
+        <a class="card tile tile--action tone-blue tile-tint" routerLink="/admin/drives">
+          <span class="stat-chip">📋</span>
+          <span class="cc-display stat-num">{{ s.pendingDriveApprovals }}</span>
           <span class="cc-small muted">Drives to approve</span>
         </a>
       </div>
 
       <h2 class="cc-h3 section">This season</h2>
       <div class="grid">
-        <div class="card tile"><span class="cc-display">{{ s.totalStudents }}</span><span class="cc-small muted">Students</span></div>
-        <div class="card tile"><span class="cc-display">{{ s.totalDrives }}</span><span class="cc-small muted">Drives</span></div>
-        <div class="card tile"><span class="cc-display">{{ s.totalApplications }}</span><span class="cc-small muted">Applications</span></div>
-        <a class="card tile tile--action" routerLink="/admin/placements"><span class="cc-display">{{ s.placedStudents }}</span><span class="cc-small muted">Placed</span></a>
+        <div class="card tile tone-purple tile-tint"><span class="stat-chip">🎓</span><span class="cc-display stat-num">{{ s.totalStudents }}</span><span class="cc-small muted">Students</span></div>
+        <div class="card tile tone-blue tile-tint"><span class="stat-chip">📋</span><span class="cc-display stat-num">{{ s.totalDrives }}</span><span class="cc-small muted">Drives</span></div>
+        <div class="card tile tone-amber tile-tint"><span class="stat-chip">📄</span><span class="cc-display stat-num">{{ s.totalApplications }}</span><span class="cc-small muted">Applications</span></div>
+        <a class="card tile tile--action tone-green tile-tint" routerLink="/admin/placements"><span class="stat-chip">🏆</span><span class="cc-display stat-num">{{ s.placedStudents }}</span><span class="cc-small muted">Placed</span></a>
       </div>
     }
   `,
   styles: [
     `
-      h1 {
-        margin: 0 0 var(--cc-space-6);
+      .hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--cc-space-4);
+        background: var(--cc-portal-grad, var(--cc-color-primary));
+        color: #fff;
+        border-radius: var(--cc-radius-lg);
+        padding: var(--cc-space-6) var(--cc-space-8);
+        margin-bottom: var(--cc-space-6);
+        box-shadow: var(--cc-shadow-sm);
+      }
+      .hero__t {
+        font: var(--cc-text-h1);
+        margin: 0;
+      }
+      .hero__s {
+        margin: var(--cc-space-1) 0 0;
+        opacity: 0.92;
+      }
+      .hero__e {
+        font-size: 46px;
+        line-height: 1;
       }
       .section {
         margin: var(--cc-space-6) 0 var(--cc-space-3);

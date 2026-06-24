@@ -44,9 +44,9 @@
   --cc-text-caption: 500 12px/16px var(--cc-font-sans);     /* labels, badges, table headers */
 
   /* ── Radii ── */
-  --cc-radius-sm: 6px;    /* inputs, small buttons */
-  --cc-radius-md: 8px;    /* buttons, badge-chips */
-  --cc-radius-lg: 12px;   /* cards, modals, panels */
+  --cc-radius-sm: 8px;    /* inputs, small buttons */
+  --cc-radius-md: 10px;   /* buttons, badge-chips */
+  --cc-radius-lg: 16px;   /* cards, modals, panels */
   --cc-radius-full: 9999px; /* pills, avatars */
 
   /* ── Spacing (4px base) ── */
@@ -63,7 +63,8 @@
   --cc-gutter: 24px;
   --cc-page-max: 1200px;
 
-  /* ── Elevation ── */
-  --cc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);   /* cards */
-  --cc-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); /* overlays */
+  /* ── Elevation ── (soft, layered — modern SaaS depth) */
+  --cc-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06); /* cards at rest */
+  --cc-shadow-md: 0 6px 16px -4px rgba(16, 24, 40, 0.1), 0 2px 6px -2px rgba(16, 24, 40, 0.06); /* hover / raised */
+  --cc-shadow-lg: 0 16px 32px -8px rgba(16, 24, 40, 0.16), 0 6px 12px -6px rgba(16, 24, 40, 0.1); /* overlays */
 }

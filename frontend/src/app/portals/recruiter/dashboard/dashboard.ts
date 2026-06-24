@@ -13,10 +13,13 @@ import { DriveCounts, driveCounts } from '../recruiter.mappers';
   standalone: true,
   imports: [RouterLink, Button],
   template: `
-    <div class="head">
-      <h1 class="cc-h2">Dashboard</h1>
-      <a routerLink="/recruiter/drives/new"><app-button>Create a drive</app-button></a>
-    </div>
+    <section class="hero">
+      <div>
+        <h1 class="hero__t">Your hiring at a glance</h1>
+        <p class="hero__s">Track your drives and candidates.</p>
+      </div>
+      <a routerLink="/recruiter/drives/new"><app-button variant="secondary">+ Create a drive</app-button></a>
+    </section>
 
     @if (state() === 'loading') {
       <div class="grid"><div class="card sk"></div><div class="card sk"></div><div class="card sk"></div><div class="card sk"></div></div>
@@ -26,23 +29,34 @@ import { DriveCounts, driveCounts } from '../recruiter.mappers';
       <div class="card"><p class="cc-body">Create your first drive to start hiring.</p></div>
     } @else {
       <div class="grid">
-        <a class="card tile" routerLink="/recruiter/drives"><span class="cc-display">{{ counts().drafts }}</span><span class="cc-small muted">Drafts</span></a>
-        <a class="card tile" routerLink="/recruiter/drives"><span class="cc-display">{{ counts().pending }}</span><span class="cc-small muted">Pending approval</span></a>
-        <a class="card tile" routerLink="/recruiter/drives"><span class="cc-display">{{ counts().open }}</span><span class="cc-small muted">Open</span></a>
-        <a class="card tile" routerLink="/recruiter/drives"><span class="cc-display">{{ counts().total }}</span><span class="cc-small muted">Total drives</span></a>
+        <a class="card tile tone-amber tile-tint" routerLink="/recruiter/drives"><span class="stat-chip">📝</span><span class="cc-display stat-num">{{ counts().drafts }}</span><span class="cc-small muted">Drafts</span></a>
+        <a class="card tile tone-sky tile-tint" routerLink="/recruiter/drives"><span class="stat-chip">⏳</span><span class="cc-display stat-num">{{ counts().pending }}</span><span class="cc-small muted">Pending approval</span></a>
+        <a class="card tile tone-green tile-tint" routerLink="/recruiter/drives"><span class="stat-chip">📢</span><span class="cc-display stat-num">{{ counts().open }}</span><span class="cc-small muted">Open</span></a>
+        <a class="card tile tone-purple tile-tint" routerLink="/recruiter/drives"><span class="stat-chip">💼</span><span class="cc-display stat-num">{{ counts().total }}</span><span class="cc-small muted">Total drives</span></a>
       </div>
     }
   `,
   styles: [
     `
-      .head {
+      .hero {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: var(--cc-space-4);
+        background: var(--cc-portal-grad, var(--cc-color-primary));
+        color: #fff;
+        border-radius: var(--cc-radius-lg);
+        padding: var(--cc-space-6) var(--cc-space-8);
         margin-bottom: var(--cc-space-6);
+        box-shadow: var(--cc-shadow-sm);
       }
-      .head h1 {
+      .hero__t {
+        font: var(--cc-text-h1);
         margin: 0;
+      }
+      .hero__s {
+        margin: var(--cc-space-1) 0 0;
+        opacity: 0.92;
       }
       .grid {
         display: grid;

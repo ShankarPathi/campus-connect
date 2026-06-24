@@ -8,25 +8,25 @@ import { Toast } from '../../shared/ui';
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   STUDENT: [
-    { label: 'Dashboard', path: '/student/dashboard' },
-    { label: 'Drives', path: '/student/drives' },
-    { label: 'My Applications', path: '/student/applications' },
-    { label: 'Profile', path: '/student/profile' },
-    { label: 'Offers', path: '/student/offers' },
-    { label: 'Notifications', path: '/student/notifications' },
+    { label: 'Dashboard', path: '/student/dashboard', icon: '🏠' },
+    { label: 'Drives', path: '/student/drives', icon: '🎓' },
+    { label: 'My Applications', path: '/student/applications', icon: '📄' },
+    { label: 'Profile', path: '/student/profile', icon: '👤' },
+    { label: 'Offers', path: '/student/offers', icon: '🎁' },
+    { label: 'Notifications', path: '/student/notifications', icon: '🔔' },
   ],
   RECRUITER: [
-    { label: 'Dashboard', path: '/recruiter/dashboard' },
-    { label: 'My Drives', path: '/recruiter/drives' },
+    { label: 'Dashboard', path: '/recruiter/dashboard', icon: '🏠' },
+    { label: 'My Drives', path: '/recruiter/drives', icon: '💼' },
   ],
   COLLEGE_ADMIN: [
-    { label: 'Dashboard', path: '/admin/dashboard' },
-    { label: 'Students', path: '/admin/students' },
-    { label: 'Recruiters', path: '/admin/recruiters' },
-    { label: 'Drives', path: '/admin/drives' },
-    { label: 'Placements', path: '/admin/placements' },
-    { label: 'Eligibility', path: '/admin/eligibility' },
-    { label: 'Reports', path: '/admin/reports' },
+    { label: 'Dashboard', path: '/admin/dashboard', icon: '🏠' },
+    { label: 'Students', path: '/admin/students', icon: '🎓' },
+    { label: 'Recruiters', path: '/admin/recruiters', icon: '🏢' },
+    { label: 'Drives', path: '/admin/drives', icon: '📋' },
+    { label: 'Placements', path: '/admin/placements', icon: '🏆' },
+    { label: 'Eligibility', path: '/admin/eligibility', icon: '⚙️' },
+    { label: 'Reports', path: '/admin/reports', icon: '📊' },
   ],
   PLATFORM_ADMIN: [],
 };
@@ -41,7 +41,13 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   imports: [RouterOutlet, Topbar, SidebarNav, Toast],
   template: `
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <div class="shell" [class.shell--drawer-open]="drawerOpen()">
+    <div
+      class="shell"
+      [class.portal--student]="portalKey() === 'student'"
+      [class.portal--recruiter]="portalKey() === 'recruiter'"
+      [class.portal--admin]="portalKey() === 'admin'"
+      [class.shell--drawer-open]="drawerOpen()"
+    >
       <app-topbar [menuExpanded]="drawerOpen()" (menuToggle)="toggleDrawer()" />
       <div class="body">
         <aside class="sidebar" id="primary-sidebar">
@@ -79,7 +85,8 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
-        background: var(--cc-color-surface);
+        /* soft per-portal colour wash behind the content; white cards pop on top */
+        background: var(--cc-portal-soft, var(--cc-color-surface));
       }
       .body {
         flex: 1;
@@ -89,7 +96,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
       .sidebar {
         width: 240px;
         flex: 0 0 240px;
-        background: var(--cc-color-surface);
+        background: var(--cc-color-surface-raised);
         border-right: 1px solid var(--cc-color-border);
       }
       .content {
@@ -132,6 +139,19 @@ export class AppShell {
   readonly navItems = computed<NavItem[]>(() => {
     const role = this.store.role();
     return role ? NAV_BY_ROLE[role] : [];
+  });
+  /** Drives the per-portal colour theme class on the shell root. */
+  readonly portalKey = computed<'student' | 'recruiter' | 'admin' | ''>(() => {
+    switch (this.store.role()) {
+      case 'STUDENT':
+        return 'student';
+      case 'RECRUITER':
+        return 'recruiter';
+      case 'COLLEGE_ADMIN':
+        return 'admin';
+      default:
+        return '';
+    }
   });
 
   toggleDrawer(): void {

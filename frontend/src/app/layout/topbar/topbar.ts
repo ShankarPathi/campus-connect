@@ -56,10 +56,11 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
         display: flex;
         align-items: center;
         gap: var(--cc-space-3);
-        height: 56px;
+        height: 60px;
         padding: 0 var(--cc-gutter);
-        background: var(--cc-color-surface-raised);
-        border-bottom: 1px solid var(--cc-color-border);
+        background: var(--cc-portal-grad, var(--cc-color-primary));
+        color: #fff;
+        box-shadow: var(--cc-shadow-sm);
       }
       .brand {
         display: inline-flex;
@@ -68,15 +69,16 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
       }
       .brand__logo {
         border-radius: var(--cc-radius-sm);
+        background: rgba(255, 255, 255, 0.18);
       }
       .logo {
-        color: var(--cc-color-primary);
+        color: #fff;
       }
       .role-tag {
         padding: 2px 8px;
         border-radius: var(--cc-radius-full);
-        background: var(--cc-color-primary-subtle);
-        color: var(--cc-color-primary);
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
         letter-spacing: 0.05em;
         text-transform: uppercase;
       }
@@ -84,7 +86,7 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
         flex: 1;
       }
       .tenant {
-        color: var(--cc-color-text-secondary);
+        color: rgba(255, 255, 255, 0.92);
       }
       .icon-btn {
         border: none;
@@ -92,7 +94,7 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
         cursor: pointer;
         font-size: 18px;
         line-height: 1;
-        color: var(--cc-color-text-secondary);
+        color: #fff;
       }
       .bell {
         position: relative;
@@ -117,12 +119,16 @@ import { StudentNotificationsService } from '../../portals/student/student.servi
         display: none;
       }
       .logout {
-        border: 1px solid var(--cc-color-border-strong);
-        background: var(--cc-color-surface-raised);
-        color: var(--cc-color-text);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
         border-radius: var(--cc-radius-sm);
         padding: var(--cc-space-1) var(--cc-space-3);
         cursor: pointer;
+        transition: background 0.12s ease;
+      }
+      .logout:hover {
+        background: rgba(255, 255, 255, 0.26);
       }
       @media (max-width: 1024px) {
         .hamburger {

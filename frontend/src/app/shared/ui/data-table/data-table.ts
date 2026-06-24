@@ -67,8 +67,9 @@ import { SortChange, TableColumn } from '../ui.models';
         position: sticky;
         top: 0;
         z-index: 1;
-        background: var(--cc-color-surface);
+        background: var(--cc-portal-soft, var(--cc-color-surface));
         font: var(--cc-text-caption);
+        font-weight: 700;
         letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--cc-color-text-secondary);
@@ -93,16 +94,20 @@ import { SortChange, TableColumn } from '../ui.models';
         color: var(--cc-color-primary);
       }
       .tr {
-        height: 48px;
+        height: 52px;
+        transition: background 0.1s ease;
       }
       .tr:hover {
-        background: var(--cc-color-surface);
+        background: var(--cc-color-primary-subtle);
       }
       .td {
         padding: 0 var(--cc-space-4);
         font: var(--cc-text-body);
         color: var(--cc-color-text);
         border-bottom: 1px solid var(--cc-color-border);
+      }
+      .tr:last-child .td {
+        border-bottom: none;
       }
     `,
   ],

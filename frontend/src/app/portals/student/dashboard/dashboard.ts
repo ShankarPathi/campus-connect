@@ -15,7 +15,13 @@ const TERMINAL: ApplicationStatus[] = ['REJECTED', 'WITHDRAWN', 'OFFER_DECLINED'
   standalone: true,
   imports: [RouterLink, ProgressRing],
   template: `
-    <h1 class="cc-h2">Dashboard</h1>
+    <section class="hero">
+      <div>
+        <h1 class="hero__t">Welcome back 👋</h1>
+        <p class="hero__s">Here's your placement journey.</p>
+      </div>
+      <span class="hero__e" aria-hidden="true">🎓</span>
+    </section>
 
     @if (state() === 'loading') {
       <div class="grid">
@@ -38,16 +44,19 @@ const TERMINAL: ApplicationStatus[] = ['REJECTED', 'WITHDRAWN', 'OFFER_DECLINED'
             <p class="cc-small muted">{{ completion() }}% complete</p>
           </div>
         </a>
-        <a class="card tile" routerLink="/student/drives">
-          <span class="cc-display">{{ eligible() }}</span>
+        <a class="card tile tone-blue tile-tint" routerLink="/student/drives">
+          <span class="stat-chip">🎓</span>
+          <span class="cc-display stat-num">{{ eligible() }}</span>
           <span class="cc-small muted">Eligible drives</span>
         </a>
-        <a class="card tile" routerLink="/student/applications">
-          <span class="cc-display">{{ activeApplications() }}</span>
+        <a class="card tile tone-amber tile-tint" routerLink="/student/applications">
+          <span class="stat-chip">📄</span>
+          <span class="cc-display stat-num">{{ activeApplications() }}</span>
           <span class="cc-small muted">Active applications</span>
         </a>
-        <a class="card tile" routerLink="/student/offers">
-          <span class="cc-display">{{ offers() }}</span>
+        <a class="card tile tone-green tile-tint" routerLink="/student/offers">
+          <span class="stat-chip">🎁</span>
+          <span class="cc-display stat-num">{{ offers() }}</span>
           <span class="cc-small muted">Offers</span>
         </a>
       </div>
@@ -59,8 +68,29 @@ const TERMINAL: ApplicationStatus[] = ['REJECTED', 'WITHDRAWN', 'OFFER_DECLINED'
   `,
   styles: [
     `
-      h1 {
-        margin: 0 0 var(--cc-space-6);
+      .hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--cc-space-4);
+        background: var(--cc-portal-grad, var(--cc-color-primary));
+        color: #fff;
+        border-radius: var(--cc-radius-lg);
+        padding: var(--cc-space-6) var(--cc-space-8);
+        margin-bottom: var(--cc-space-6);
+        box-shadow: var(--cc-shadow-sm);
+      }
+      .hero__t {
+        font: var(--cc-text-h1);
+        margin: 0;
+      }
+      .hero__s {
+        margin: var(--cc-space-1) 0 0;
+        opacity: 0.92;
+      }
+      .hero__e {
+        font-size: 46px;
+        line-height: 1;
       }
       .grid {
         display: grid;
