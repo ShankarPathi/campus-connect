@@ -40,7 +40,7 @@ describe('ReportsPage', () => {
     await settleLoad();
 
     expect(page.report()?.overall.placementPercent).toBe(60);
-    expect(page.branchRows()).toEqual([{ branch: 'CSE', totalStudents: 50, placedStudents: 35, placementPercent: 70 }]);
+    expect(page.branches()).toEqual([{ branch: 'CSE', totalStudents: 50, placedStudents: 35, placementPercent: 70 }]);
     expect(page.companyRows()).toEqual([{ company: 'TCS', placements: 20 }]);
 
     const text = fixture.nativeElement.textContent as string;
@@ -49,8 +49,13 @@ describe('ReportsPage', () => {
     expect(text).toContain('CSE');
     expect(text).toContain('TCS');
 
+    // Branch breakdown is rendered as progress bars; the CSE fill reflects its 70% placement.
+    const fill = fixture.nativeElement.querySelector('.brow__fill') as HTMLElement;
+    expect(fill.style.width).toBe('70%');
+
+    // Only the company breakdown still uses the generic data-table now.
     const tables = fixture.nativeElement.querySelectorAll('app-data-table');
-    expect(tables.length).toBe(2);
+    expect(tables.length).toBe(1);
   });
 
   it('Export CSV requests text, builds a download, and revokes the object URL', async () => {

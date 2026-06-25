@@ -6,10 +6,12 @@ import { Topbar } from './topbar/topbar';
 import { AppShell } from './app-shell/app-shell';
 import { AuthStore } from '../core/auth/auth.store';
 import { AuthService } from '../core/auth/auth.service';
-import { StudentNotificationsService } from '../portals/student/student.services';
+import { ProfileService, StudentNotificationsService } from '../portals/student/student.services';
 
 // The topbar bell binds to the student notifications unread signal; stub it (no HTTP in these layout tests).
 const notificationsStub = { unreadCount: signal(0), refreshUnread: () => Promise.resolve(0) };
+// The topbar greets the student by their real name; stub the profile fetch (no HTTP in these layout tests).
+const profileStub = { getProfile: () => Promise.resolve({ personal: { fullName: 'Karthik Rao' } }) };
 
 function jwt(claims: object): string {
   const b64 = (o: object) =>
@@ -29,6 +31,7 @@ describe('Topbar', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { logout } },
         { provide: StudentNotificationsService, useValue: notificationsStub },
+        { provide: ProfileService, useValue: profileStub },
       ],
     }).compileComponents();
     store = TestBed.inject(AuthStore);
@@ -40,6 +43,9 @@ describe('Topbar', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('[data-test="tenant-name"]').textContent.trim()).toBe('vignan');
     expect(fixture.nativeElement.querySelector('.role-tag').textContent.trim()).toBe('STUDENT');
+    // The identity chip greets the student by name with initials in the avatar.
+    expect(fixture.nativeElement.querySelector('.me__name').textContent.trim()).toBe('Karthik Rao');
+    expect(fixture.nativeElement.querySelector('.me__avatar').textContent.trim()).toBe('KR');
 
     (fixture.nativeElement.querySelector('.logout') as HTMLButtonElement).click();
     expect(logout).toHaveBeenCalled();
@@ -57,6 +63,7 @@ describe('AppShell', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { logout: vi.fn() } },
         { provide: StudentNotificationsService, useValue: notificationsStub },
+        { provide: ProfileService, useValue: profileStub },
       ],
     }).compileComponents();
     store = TestBed.inject(AuthStore);

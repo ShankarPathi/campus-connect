@@ -51,6 +51,29 @@ import { DashboardSnapshot } from '../admin.models';
         <div class="card tile tone-amber tile-tint"><span class="stat-chip">📄</span><span class="cc-display stat-num">{{ s.totalApplications }}</span><span class="cc-small muted">Applications</span></div>
         <a class="card tile tile--action tone-green tile-tint" routerLink="/admin/placements"><span class="stat-chip">🏆</span><span class="cc-display stat-num">{{ s.placedStudents }}</span><span class="cc-small muted">Placed</span></a>
       </div>
+
+      <h2 class="cc-h3 section">Season progress</h2>
+      <section class="card progress">
+        <div class="progress__head">
+          <span class="cc-display">{{ placedPct(s) }}%</span>
+          <span class="cc-small muted">{{ s.placedStudents }} of {{ s.totalStudents }} students placed</span>
+        </div>
+        <div class="bar" aria-hidden="true"><span class="bar__fill" [style.width.%]="placedPct(s)"></span></div>
+        <div class="pstats">
+          <div class="pstat">
+            <span class="cc-h2">{{ s.totalStudents - s.placedStudents }}</span>
+            <span class="cc-small muted">Yet to place</span>
+          </div>
+          <div class="pstat">
+            <span class="cc-h2">{{ avgApplications(s) }}</span>
+            <span class="cc-small muted">Avg applications / drive</span>
+          </div>
+          <div class="pstat">
+            <span class="cc-h2">{{ s.totalApplications }}</span>
+            <span class="cc-small muted">Total applications</span>
+          </div>
+        </div>
+      </section>
     }
   `,
   styles: [
@@ -104,6 +127,51 @@ import { DashboardSnapshot } from '../admin.models';
       .tile--action:hover {
         border-color: var(--cc-color-primary);
       }
+      .progress {
+        padding: var(--cc-space-6);
+      }
+      .progress__head {
+        display: flex;
+        align-items: baseline;
+        gap: var(--cc-space-3);
+        flex-wrap: wrap;
+      }
+      .bar {
+        position: relative;
+        height: 12px;
+        margin: var(--cc-space-4) 0 var(--cc-space-6);
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-color-surface);
+        box-shadow: inset 0 0 0 1px var(--cc-color-border);
+        overflow: hidden;
+      }
+      .bar__fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        min-width: 6px;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-grad, var(--cc-color-primary));
+        transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .pstats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--cc-gutter);
+      }
+      .pstat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--cc-space-4);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-md);
+        background: var(--cc-portal-soft, var(--cc-color-surface));
+      }
+      @media (max-width: 640px) {
+        .pstats {
+          grid-template-columns: 1fr;
+        }
+      }
       .sk {
         height: 96px;
         background: var(--cc-color-surface);
@@ -129,6 +197,16 @@ export class AdminDashboardPage {
 
   constructor() {
     void this.reload();
+  }
+
+  /** Placement rate as a whole percentage (0 when there are no students yet). */
+  placedPct(s: DashboardSnapshot): number {
+    return s.totalStudents > 0 ? Math.round((s.placedStudents / s.totalStudents) * 100) : 0;
+  }
+
+  /** Average applications per drive, one decimal ("—" before any drive exists). */
+  avgApplications(s: DashboardSnapshot): string {
+    return s.totalDrives > 0 ? (s.totalApplications / s.totalDrives).toFixed(1) : '—';
   }
 
   async reload(): Promise<void> {

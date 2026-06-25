@@ -1,8 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Button } from '../../../shared/ui';
+import { Button, StatusPill, StatusVariant, statusToVariant } from '../../../shared/ui';
 import { DriveService } from '../recruiter.services';
-import { DriveCounts, driveCounts } from '../recruiter.mappers';
+import { DriveCounts, driveCounts, driveStatusLabel } from '../recruiter.mappers';
+
+interface RecentDrive {
+  id: string;
+  company: string;
+  role: string;
+  variant: StatusVariant;
+  statusLabel: string;
+}
 
 /**
  * Recruiter dashboard (Story 9.5) — a light landing composed from the my-drives list (no recruiter-dashboard
@@ -11,7 +19,7 @@ import { DriveCounts, driveCounts } from '../recruiter.mappers';
 @Component({
   selector: 'app-recruiter-dashboard',
   standalone: true,
-  imports: [RouterLink, Button],
+  imports: [RouterLink, Button, StatusPill],
   template: `
     <section class="hero">
       <div>
@@ -34,6 +42,22 @@ import { DriveCounts, driveCounts } from '../recruiter.mappers';
         <a class="card tile tone-green tile-tint" routerLink="/recruiter/drives"><span class="stat-chip">📢</span><span class="cc-display stat-num">{{ counts().open }}</span><span class="cc-small muted">Open</span></a>
         <a class="card tile tone-purple tile-tint" routerLink="/recruiter/drives"><span class="stat-chip">💼</span><span class="cc-display stat-num">{{ counts().total }}</span><span class="cc-small muted">Total drives</span></a>
       </div>
+
+      <section class="card drives">
+        <div class="drives__head">
+          <h2 class="cc-body-medium dtitle">Your drives</h2>
+          <a class="seeall cc-small" routerLink="/recruiter/drives">See all →</a>
+        </div>
+        @for (d of recent(); track d.id) {
+          <a class="row" [routerLink]="['/recruiter/drives', d.id]">
+            <span class="row__main">
+              <span class="cc-body-medium">{{ d.company }}</span>
+              <span class="cc-small muted">{{ d.role }}</span>
+            </span>
+            <app-status-pill [variant]="d.variant" [label]="d.statusLabel" />
+          </a>
+        }
+      </section>
     }
   `,
   styles: [
@@ -80,6 +104,49 @@ import { DriveCounts, driveCounts } from '../recruiter.mappers';
       a.card:hover {
         border-color: var(--cc-color-border-strong);
       }
+      .drives {
+        margin-top: var(--cc-gutter);
+        padding: var(--cc-space-5) var(--cc-space-6);
+      }
+      .drives__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--cc-space-3);
+      }
+      .dtitle {
+        margin: 0;
+      }
+      .seeall {
+        color: var(--cc-color-primary);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .seeall:hover {
+        text-decoration: underline;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--cc-space-3);
+        padding: var(--cc-space-3) 0;
+        border-bottom: 1px solid var(--cc-color-border);
+        text-decoration: none;
+        color: var(--cc-color-text);
+      }
+      .row:last-child {
+        border-bottom: none;
+      }
+      .row:hover .row__main > :first-child {
+        color: var(--cc-color-primary);
+      }
+      .row__main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
       .sk {
         height: 96px;
         background: var(--cc-color-surface);
@@ -103,6 +170,7 @@ export class RecruiterDashboardPage {
 
   readonly state = signal<'loading' | 'error' | 'ready'>('loading');
   readonly counts = signal<DriveCounts>({ drafts: 0, pending: 0, open: 0, total: 0 });
+  readonly recent = signal<RecentDrive[]>([]);
 
   constructor() {
     void this.reload();
@@ -111,7 +179,17 @@ export class RecruiterDashboardPage {
   async reload(): Promise<void> {
     this.state.set('loading');
     try {
-      this.counts.set(driveCounts(await this.driveSvc.list()));
+      const drives = await this.driveSvc.list();
+      this.counts.set(driveCounts(drives));
+      this.recent.set(
+        drives.slice(0, 5).map((d) => ({
+          id: d.id,
+          company: d.companyName,
+          role: d.role ?? '—',
+          variant: statusToVariant(d.status),
+          statusLabel: driveStatusLabel(d.status),
+        })),
+      );
       this.state.set('ready');
     } catch {
       this.state.set('error');
