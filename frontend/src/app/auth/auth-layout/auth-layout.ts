@@ -1,5 +1,13 @@
 import { Component, computed, input } from '@angular/core';
 
+/** Floating role-themed chips that drift behind the card — switch with the selected portal. */
+const DECO: Record<string, string[]> = {
+  student: ['🎓', '📚', '✏️', '🎒', '💡', '📅'],
+  recruiter: ['💼', '🏢', '📈', '🤝', '📋', '⭐'],
+  admin: ['🛡️', '📊', '⚙️', '🏆', '📁', '✅'],
+  '': ['🎓', '💼', '🛡️', '📈', '🤝', '✨'],
+};
+
 /** Per-portal welcome panel content (idea #4). */
 const WELCOME: Record<string, { emoji: string; line: string; points: string[] }> = {
   student: {
@@ -26,8 +34,8 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
 
 /**
  * AuthLayout (Story 9.3, +premium redesign) — a split-screen auth page on a rich, portal-themed mesh
- * gradient with a faint dot grid and softly drifting glass orbs. Left: a welcome panel whose message
- * switches with the selected portal. Right: a frosted-glass form card (projected body + footer). The
+ * gradient with a faint dot grid, softly drifting glass orbs, and floating role-themed emoji chips.
+ * Left: a welcome panel whose message switches with the selected portal. Right: a frosted-glass form card (projected body + footer). The
  * optional `portal` input drives the theme, the welcome copy, and `--cc-color-primary` (so the form's
  * button/links match the chosen portal).
  */
@@ -46,6 +54,9 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
         <span class="orb orb--a"></span>
         <span class="orb orb--b"></span>
         <span class="orb orb--c"></span>
+        @for (d of deco(); track $index) {
+          <span class="deco deco--{{ $index + 1 }}">{{ d }}</span>
+        }
       </div>
 
       <section class="card">
@@ -177,6 +188,80 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
         }
         50% {
           transform: translate(30px, -28px);
+        }
+      }
+
+      /* floating role-themed glass chips that gently bob */
+      .deco {
+        position: absolute;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        backdrop-filter: blur(7px);
+        -webkit-backdrop-filter: blur(7px);
+        box-shadow: 0 12px 28px rgba(16, 24, 40, 0.18);
+        user-select: none;
+        line-height: 1;
+        animation: float 7s ease-in-out infinite;
+      }
+      .deco--1 {
+        top: 9%;
+        left: 7%;
+        width: 84px;
+        height: 84px;
+        font-size: 40px;
+        animation-delay: 0s;
+      }
+      .deco--2 {
+        top: 16%;
+        right: 9%;
+        width: 64px;
+        height: 64px;
+        font-size: 30px;
+        animation-delay: 1.3s;
+      }
+      .deco--3 {
+        bottom: 14%;
+        left: 6%;
+        width: 72px;
+        height: 72px;
+        font-size: 34px;
+        animation-delay: 0.6s;
+      }
+      .deco--4 {
+        bottom: 9%;
+        right: 7%;
+        width: 92px;
+        height: 92px;
+        font-size: 44px;
+        animation-delay: 2s;
+      }
+      .deco--5 {
+        top: 50%;
+        left: 4%;
+        width: 56px;
+        height: 56px;
+        font-size: 26px;
+        animation-delay: 2.6s;
+      }
+      .deco--6 {
+        top: 62%;
+        right: 4%;
+        width: 60px;
+        height: 60px;
+        font-size: 28px;
+        animation-delay: 0.9s;
+      }
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-14px);
         }
       }
 
@@ -312,5 +397,6 @@ export class AuthLayout {
   readonly subtitle = input('');
   /** '' | 'student' | 'recruiter' | 'admin' — themes the background, welcome copy + accent. */
   readonly portal = input<string>('');
+  readonly deco = computed(() => DECO[this.portal()] ?? DECO['']);
   readonly welcome = computed(() => WELCOME[this.portal()] ?? WELCOME['']);
 }
