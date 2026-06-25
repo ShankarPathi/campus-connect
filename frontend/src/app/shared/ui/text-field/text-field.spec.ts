@@ -6,11 +6,12 @@ import { TextField } from './text-field';
 @Component({
   standalone: true,
   imports: [TextField, ReactiveFormsModule],
-  template: `<app-text-field [label]="'Email'" [error]="error" [formControl]="ctrl" />`,
+  template: `<app-text-field [label]="'Email'" [type]="type" [error]="error" [formControl]="ctrl" />`,
 })
 class Host {
   ctrl = new FormControl('');
   error = '';
+  type: 'text' | 'email' | 'password' | 'tel' = 'text';
 }
 
 describe('TextField', () => {
@@ -44,5 +45,35 @@ describe('TextField', () => {
     input.dispatchEvent(new Event('input'));
     await fixture.whenStable();
     expect(host.ctrl.value).toBe('c@d.com');
+  });
+
+  it('password fields start hidden and the eye toggle reveals/hides the value', async () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.type = 'password';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    const toggle = fixture.nativeElement.querySelector('.field__toggle') as HTMLButtonElement;
+    expect(input.getAttribute('type')).toBe('password'); // hidden by default
+    expect(toggle.getAttribute('aria-label')).toBe('Show password');
+    expect(toggle.getAttribute('type')).toBe('button'); // never submits the form
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.getAttribute('type')).toBe('text'); // revealed
+    expect(toggle.getAttribute('aria-label')).toBe('Hide password');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.getAttribute('type')).toBe('password'); // hidden again
+  });
+
+  it('non-password fields have no eye toggle', async () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.type = 'email';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.field__toggle')).toBeNull();
   });
 });

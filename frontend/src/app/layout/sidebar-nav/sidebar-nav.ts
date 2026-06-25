@@ -41,31 +41,45 @@ export interface NavItem {
         padding: var(--cc-space-4) var(--cc-space-3);
       }
       .nav-link {
+        position: relative;
         display: flex;
         align-items: center;
         gap: var(--cc-space-3);
-        padding: var(--cc-space-2) var(--cc-space-3);
+        padding: var(--cc-space-3) var(--cc-space-3);
         border-radius: var(--cc-radius-md);
         color: var(--cc-color-text-secondary);
         text-decoration: none;
         transition:
-          background 0.12s ease,
-          color 0.12s ease;
+          background 0.14s ease,
+          color 0.14s ease,
+          transform 0.14s ease,
+          box-shadow 0.14s ease;
       }
       .nav-link__icon {
-        font-size: 16px;
-        width: 20px;
-        text-align: center;
+        font-size: 17px;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-sm);
+        background: var(--cc-color-primary-subtle);
         flex: none;
+        transition: background 0.14s ease;
       }
       .nav-link:hover {
         background: var(--cc-color-primary-subtle);
         color: var(--cc-color-text);
       }
+      /* active = a filled portal-gradient pill — clear colour, not a plain white rail */
       .nav-link--active {
-        background: var(--cc-color-primary-subtle);
-        color: var(--cc-color-primary);
+        background: var(--cc-portal-grad, var(--cc-color-primary));
+        color: #fff;
         font-weight: 700;
+        box-shadow: var(--cc-shadow-sm);
+      }
+      .nav-link--active .nav-link__icon {
+        background: rgba(255, 255, 255, 0.22);
       }
     `,
   ],

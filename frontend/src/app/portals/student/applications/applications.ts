@@ -32,13 +32,15 @@ type LoadState = 'loading' | 'error' | 'ready';
       @if (state() === 'loading') {
         <p class="muted" role="status">Loading…</p>
       } @else if (state() === 'error') {
-        <div class="panel" role="alert">
+        <div class="card panel" role="alert">
           <p class="muted">We couldn't load your applications.</p>
           <app-button variant="secondary" size="sm" (click)="reload()">Retry</app-button>
         </div>
       } @else if (applications().length === 0) {
-        <div class="panel empty">
-          <p class="muted">No applications yet — apply to an eligible drive and it'll show up here.</p>
+        <div class="card empty" role="status">
+          <span class="empty__icon" aria-hidden="true">📄</span>
+          <p class="empty__title cc-body-medium">No applications yet</p>
+          <p class="empty__sub cc-small">Apply to an eligible drive and it'll show up here.</p>
         </div>
       } @else {
         <ul class="cards">
@@ -140,7 +142,34 @@ type LoadState = 'loading' | 'error' | 'ready';
         border-radius: var(--cc-radius-lg);
       }
       .empty {
-        align-items: flex-start;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0;
+        color: var(--cc-color-text-secondary);
+        max-width: 380px;
       }
       .muted {
         margin: 0;
@@ -177,8 +206,9 @@ export class ApplicationsPage {
       const list = await this.service.listApplications();
       this.applications.set(list);
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load your applications.');
     }
   }
 

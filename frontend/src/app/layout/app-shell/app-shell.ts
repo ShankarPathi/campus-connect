@@ -85,8 +85,14 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
-        /* soft per-portal colour wash behind the content; white cards pop on top */
-        background: var(--cc-portal-soft, var(--cc-color-surface));
+        /* Layered per-portal colour: a soft glow in the top-right that fades into a gentle
+           vertical wash. Gives the canvas depth + colour so the white cards pop instead of
+           floating on near-white. */
+        background:
+          radial-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
+          radial-gradient(1100px 460px at 100% -140px, var(--cc-portal-soft-2), transparent 70%),
+          linear-gradient(180deg, var(--cc-portal-soft) 0%, var(--cc-color-surface) 100%);
+        background-attachment: fixed;
       }
       .body {
         flex: 1;
@@ -96,7 +102,12 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
       .sidebar {
         width: 240px;
         flex: 0 0 240px;
-        background: var(--cc-color-surface-raised);
+        /* a whisper of the portal tint up top so the rail isn't a stark white slab */
+        background: linear-gradient(
+          180deg,
+          var(--cc-portal-soft, var(--cc-color-surface-raised)),
+          var(--cc-color-surface-raised) 200px
+        );
         border-right: 1px solid var(--cc-color-border);
       }
       .content {

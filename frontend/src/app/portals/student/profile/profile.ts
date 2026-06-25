@@ -43,31 +43,31 @@ const NUMERIC = /^\d*\.?\d+$/;
         <form class="form" [formGroup]="form">
           <section id="sec-personal" class="card" formGroupName="personal">
             <h2 class="cc-h3">Personal</h2>
-            <app-text-field label="Full name" formControlName="fullName" />
-            <app-text-field label="Phone" type="tel" formControlName="phone" />
+            <app-text-field label="Full name" formControlName="fullName" [required]="true" [error]="err('personal.fullName', 'Full name')" />
+            <app-text-field label="Phone" type="tel" formControlName="phone" [required]="true" [error]="err('personal.phone', 'Phone')" />
             <app-text-field label="Gender" formControlName="gender" />
-            <app-text-field label="Date of birth" formControlName="dateOfBirth" hint="YYYY-MM-DD" />
-            <app-text-field label="Address" formControlName="address" />
+            <app-text-field label="Date of birth" formControlName="dateOfBirth" hint="YYYY-MM-DD (optional)" />
+            <app-text-field label="Address" formControlName="address" hint="Optional" />
           </section>
 
           <section id="sec-rollbatch" class="card">
             <h2 class="cc-h3">Roll & batch</h2>
-            <app-text-field label="Roll number" formControlName="rollNumber" />
-            <app-text-field label="Batch" formControlName="batch" />
+            <app-text-field label="Roll number" formControlName="rollNumber" [required]="true" [error]="err('rollNumber', 'Roll number')" />
+            <app-text-field label="Batch" formControlName="batch" [required]="true" [error]="err('batch', 'Batch')" />
           </section>
 
           <section id="sec-academic" class="card" formGroupName="academic">
             <h2 class="cc-h3">Academic</h2>
-            <app-text-field label="Branch" formControlName="branch" />
-            <app-text-field label="CGPA" type="text" inputmode="decimal" formControlName="cgpa" [error]="err('academic.cgpa', 'CGPA')" />
-            <app-text-field label="Active backlogs" type="text" inputmode="numeric" formControlName="activeBacklogs" [error]="err('academic.activeBacklogs', 'Active backlogs')" />
+            <app-text-field label="Branch" formControlName="branch" [required]="true" [error]="err('academic.branch', 'Branch')" />
+            <app-text-field label="CGPA" type="text" inputmode="decimal" formControlName="cgpa" [required]="true" [error]="err('academic.cgpa', 'CGPA')" />
+            <app-text-field label="Active backlogs" type="text" inputmode="numeric" formControlName="activeBacklogs" [required]="true" [error]="err('academic.activeBacklogs', 'Active backlogs')" />
           </section>
 
           <section id="sec-placement" class="card" formGroupName="placement">
             <h2 class="cc-h3">Placement</h2>
-            <app-text-field label="Skills" formControlName="skills" hint="Comma-separated, e.g. Java, SQL" />
-            <app-text-field label="Expected role" formControlName="expectedRole" />
-            <app-text-field label="About" formControlName="about" />
+            <app-text-field label="Skills" formControlName="skills" [required]="true" hint="Comma-separated, e.g. Java, SQL" [error]="err('placement.skills', 'Skills')" />
+            <app-text-field label="Expected role" formControlName="expectedRole" hint="Optional" />
+            <app-text-field label="About" formControlName="about" hint="Optional" />
           </section>
 
           @if (!profile()?.isLocked) {
@@ -91,21 +91,39 @@ const NUMERIC = /^\d*\.?\d+$/;
           <div class="card">
             <h2 class="cc-h3">Resume</h2>
             @if (resume()?.hasResume) {
-              <p class="cc-body">{{ resume()?.originalName }} <span class="muted">· v{{ resume()?.version }}</span></p>
-              @if (resume()?.previewUrl) {
-                <a class="link" [href]="resume()?.previewUrl" target="_blank" rel="noopener">Preview</a>
-              }
-            } @else {
-              <p class="cc-body muted">No resume uploaded yet.</p>
+              <div class="resume-have">
+                <span class="resume-have__icon" aria-hidden="true">📄</span>
+                <span class="resume-have__meta">
+                  <span class="cc-body-medium">{{ resume()?.originalName }}</span>
+                  <span class="cc-caption muted">Version {{ resume()?.version }}</span>
+                </span>
+                @if (resume()?.previewUrl) {
+                  <a class="link" [href]="resume()?.previewUrl" target="_blank" rel="noopener">Preview</a>
+                }
+              </div>
             }
             @if (resumeError()) {
               <p class="field-error cc-small" role="alert">{{ resumeError() }}</p>
             }
             @if (!profile()?.isLocked) {
-              <label class="upload cc-body-medium">
-                {{ resume()?.hasResume ? 'Replace (PDF)' : 'Upload (PDF)' }}
-                <input type="file" accept="application/pdf" (change)="onFile($event)" hidden />
-              </label>
+              <div
+                class="dropzone"
+                [class.dropzone--over]="dragOver()"
+                role="button"
+                tabindex="0"
+                (click)="fileInput.click()"
+                (keydown.enter)="fileInput.click()"
+                (keydown.space)="fileInput.click(); $event.preventDefault()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onDrop($event)"
+              >
+                <span class="dropzone__icon" aria-hidden="true">⬆️</span>
+                <p class="cc-body-medium dropzone__title">{{ resume()?.hasResume ? 'Replace your résumé' : 'Upload your résumé' }}</p>
+                <p class="cc-small muted">Drag &amp; drop a PDF here, or <span class="dropzone__browse">browse</span></p>
+                <p class="cc-caption muted">PDF · up to {{ maxMb }} MB</p>
+                <input #fileInput type="file" accept="application/pdf" (change)="onFile($event)" hidden />
+              </div>
             }
           </div>
         </aside>
@@ -190,10 +208,64 @@ const NUMERIC = /^\d*\.?\d+$/;
         color: var(--cc-color-danger);
         margin: 0;
       }
-      .upload {
-        display: inline-block;
+      .resume-have {
+        display: flex;
+        align-items: center;
+        gap: var(--cc-space-3);
+      }
+      .resume-have__icon {
+        font-size: 22px;
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-md);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        flex: none;
+      }
+      .resume-have__meta {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1;
+      }
+      .dropzone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-1);
+        padding: var(--cc-space-6) var(--cc-space-4);
+        border: 2px dashed var(--cc-color-border-strong);
+        border-radius: var(--cc-radius-md);
+        background: var(--cc-color-surface);
         cursor: pointer;
+        transition:
+          border-color 0.15s ease,
+          background 0.15s ease;
+      }
+      .dropzone:hover,
+      .dropzone:focus-visible {
+        border-color: var(--cc-color-primary);
+        outline: none;
+      }
+      .dropzone--over {
+        border-color: var(--cc-color-primary);
+        background: var(--cc-color-primary-subtle);
+      }
+      .dropzone__icon {
+        font-size: 26px;
+        line-height: 1;
+        margin-bottom: var(--cc-space-1);
+      }
+      .dropzone__title {
+        margin: 0;
+      }
+      .dropzone__browse {
         color: var(--cc-color-primary);
+        font-weight: 600;
+        text-decoration: underline;
       }
       .link {
         background: none;
@@ -223,6 +295,23 @@ export class ProfilePage {
   readonly saving = signal(false);
   readonly submitting = signal(false);
   readonly completion = computed(() => this.profile()?.completionPercent ?? 0);
+  /** Reveal "X is required" messages once the user has attempted to submit. */
+  readonly showRequired = signal(false);
+  /** Whether a PDF is being dragged over the résumé dropzone. */
+  readonly dragOver = signal(false);
+  protected readonly maxMb = MAX_RESUME_MB;
+
+  /** The fields the backend counts toward completion (Story 3.1) — mandatory before submit. */
+  private readonly REQUIRED_PATHS = [
+    'personal.fullName',
+    'personal.phone',
+    'rollNumber',
+    'batch',
+    'academic.branch',
+    'academic.cgpa',
+    'academic.activeBacklogs',
+    'placement.skills',
+  ];
 
   readonly form = this.fb.nonNullable.group({
     personal: this.fb.nonNullable.group({
@@ -259,8 +348,18 @@ export class ProfilePage {
 
   err(path: string, label: string): string {
     const c = this.form.get(path);
-    if (c && c.touched && c.invalid) {
+    if (!c) {
+      return '';
+    }
+    if (c.touched && c.invalid) {
+      if (c.errors?.['required']) {
+        return `${label} is required.`;
+      }
       return c.errors?.['pattern'] ? `${label} must be a number.` : `${label} is out of range.`;
+    }
+    // Mandatory-field message — only after a submit attempt, so drafting stays quiet.
+    if (this.REQUIRED_PATHS.includes(path) && this.showRequired() && this.isBlank(path)) {
+      return `${label} is required.`;
     }
     return '';
   }
@@ -354,8 +453,19 @@ export class ProfilePage {
     };
   }
 
+  /**
+   * Block a draft save only on bad-format values (CGPA/backlogs pattern/range) — a draft is allowed to
+   * be partial, so missing mandatory fields do NOT block Save (only Submit enforces them).
+   */
+  private hasFormatErrors(): boolean {
+    return ['academic.cgpa', 'academic.activeBacklogs'].some((p) => {
+      const e = this.form.get(p)?.errors;
+      return !!e && Object.keys(e).some((k) => k !== 'required');
+    });
+  }
+
   async save(): Promise<void> {
-    if (this.form.invalid) {
+    if (this.hasFormatErrors()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -371,8 +481,14 @@ export class ProfilePage {
   }
 
   async submit(): Promise<void> {
-    if (this.form.invalid) {
+    // Reveal mandatory-field markers and stop here if anything required is missing or invalid —
+    // surfaces exactly which fields to fix instead of a round-trip to the backend.
+    this.showRequired.set(true);
+    const missingRequired = this.REQUIRED_PATHS.some((p) => this.isBlank(p));
+    if (this.form.invalid || missingRequired) {
       this.form.markAllAsTouched();
+      this.toast.error('Please fill in all required fields (marked *) before submitting.');
+      this.jumpToIncomplete();
       return;
     }
     this.submitting.set(true);
@@ -387,20 +503,44 @@ export class ProfilePage {
   }
 
   async onFile(event: Event): Promise<void> {
-    this.resumeError.set(null);
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    await this.handleFile(input.files?.[0]);
+    input.value = '';
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (!this.profile()?.isLocked) {
+      this.dragOver.set(true);
+    }
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.dragOver.set(false);
+  }
+
+  async onDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    this.dragOver.set(false);
+    if (this.profile()?.isLocked) {
+      return;
+    }
+    await this.handleFile(event.dataTransfer?.files?.[0]);
+  }
+
+  /** Validate (PDF, size) and upload a résumé file from either the picker or a drag-drop. */
+  private async handleFile(file: File | undefined): Promise<void> {
+    this.resumeError.set(null);
     if (!file) {
       return;
     }
     if (file.type !== 'application/pdf') {
       this.resumeError.set('Resume must be a PDF.');
-      input.value = '';
       return;
     }
     if (file.size > MAX_RESUME_BYTES) {
       this.resumeError.set(`Resume must be a PDF under ${MAX_RESUME_MB} MB.`);
-      input.value = '';
       return;
     }
     try {
@@ -408,8 +548,6 @@ export class ProfilePage {
       this.toast.success('Resume uploaded.');
     } catch (e) {
       this.resumeError.set(toAuthErrorView(e).formMessage ?? 'Could not upload your resume.');
-    } finally {
-      input.value = '';
     }
   }
 }

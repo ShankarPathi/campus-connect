@@ -1,13 +1,5 @@
 import { Component, computed, input } from '@angular/core';
 
-/** Floating role-themed chips behind the card — switch with the selected portal. */
-const DECO: Record<string, string[]> = {
-  student: ['🎓', '📚', '✏️', '🎒', '💡', '📅'],
-  recruiter: ['💼', '🏢', '📈', '🤝', '📋', '⭐'],
-  admin: ['🛡️', '📊', '⚙️', '🏆', '📁', '✅'],
-  '': ['🎓', '💼', '🛡️', '📈', '🤝', '✨'],
-};
-
 /** Per-portal welcome panel content (idea #4). */
 const WELCOME: Record<string, { emoji: string; line: string; points: string[] }> = {
   student: {
@@ -33,10 +25,11 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
 };
 
 /**
- * AuthLayout (Story 9.3, +premium redesign) — a split-screen auth page on a live, portal-themed animated
- * gradient with floating role chips. Left: a welcome panel whose message switches with the selected portal.
- * Right: a frosted-glass form card (projected body + footer). The optional `portal` input drives the theme,
- * the welcome copy, and `--cc-color-primary` (so the form's button/links match the chosen portal).
+ * AuthLayout (Story 9.3, +premium redesign) — a split-screen auth page on a rich, portal-themed mesh
+ * gradient with a faint dot grid and softly drifting glass orbs. Left: a welcome panel whose message
+ * switches with the selected portal. Right: a frosted-glass form card (projected body + footer). The
+ * optional `portal` input drives the theme, the welcome copy, and `--cc-color-primary` (so the form's
+ * button/links match the chosen portal).
  */
 @Component({
   selector: 'app-auth-layout',
@@ -49,11 +42,10 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
       [class.portal--admin]="portal() === 'admin'"
     >
       <div class="auth__bg" aria-hidden="true">
-        <span class="blob blob--a"></span>
-        <span class="blob blob--b"></span>
-        @for (d of deco(); track $index) {
-          <span class="deco deco--{{ $index + 1 }}">{{ d }}</span>
-        }
+        <span class="grid"></span>
+        <span class="orb orb--a"></span>
+        <span class="orb orb--b"></span>
+        <span class="orb orb--c"></span>
       </div>
 
       <section class="card">
@@ -91,7 +83,7 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
       :host {
         display: block;
       }
-      /* animated, portal-themed gradient (idea #3) */
+      /* Rich multi-hue mesh gradient per portal — depth, not a flat single colour. */
       .auth {
         position: relative;
         min-height: 100vh;
@@ -100,130 +92,91 @@ const WELCOME: Record<string, { emoji: string; line: string; points: string[] }>
         justify-content: center;
         padding: var(--cc-space-8) var(--cc-space-4);
         overflow: hidden;
-        background: linear-gradient(125deg, #3730a3, #6366f1, #818cf8, #6366f1);
-        background-size: 300% 300%;
-        animation: gradientShift 18s ease infinite;
+        background-color: #312e81;
+        background-image:
+          radial-gradient(at 16% 20%, #6366f1 0px, transparent 50%),
+          radial-gradient(at 84% 14%, #4f46e5 0px, transparent 48%),
+          radial-gradient(at 78% 86%, #7c3aed 0px, transparent 50%),
+          radial-gradient(at 20% 82%, #4338ca 0px, transparent 48%);
       }
       .auth.portal--student {
-        background: linear-gradient(125deg, #1e3a8a, #2563eb, #60a5fa, #3b82f6);
-        background-size: 300% 300%;
+        background-color: #1e3a8a;
+        background-image:
+          radial-gradient(at 16% 20%, #3b82f6 0px, transparent 50%),
+          radial-gradient(at 84% 14%, #2563eb 0px, transparent 48%),
+          radial-gradient(at 78% 86%, #0ea5e9 0px, transparent 50%),
+          radial-gradient(at 20% 82%, #1e40af 0px, transparent 48%);
       }
       .auth.portal--recruiter {
-        background: linear-gradient(125deg, #065f46, #059669, #34d399, #10b981);
-        background-size: 300% 300%;
+        background-color: #064e3b;
+        background-image:
+          radial-gradient(at 16% 20%, #10b981 0px, transparent 50%),
+          radial-gradient(at 84% 14%, #059669 0px, transparent 48%),
+          radial-gradient(at 78% 86%, #14b8a6 0px, transparent 50%),
+          radial-gradient(at 20% 82%, #047857 0px, transparent 48%);
       }
       .auth.portal--admin {
-        background: linear-gradient(125deg, #5b21b6, #7c3aed, #a78bfa, #8b5cf6);
-        background-size: 300% 300%;
+        background-color: #4c1d95;
+        background-image:
+          radial-gradient(at 16% 20%, #8b5cf6 0px, transparent 50%),
+          radial-gradient(at 84% 14%, #7c3aed 0px, transparent 48%),
+          radial-gradient(at 78% 86%, #a855f7 0px, transparent 50%),
+          radial-gradient(at 20% 82%, #6d28d9 0px, transparent 48%);
       }
-      @keyframes gradientShift {
-        0% {
-          background-position: 0% 50%;
-        }
-        50% {
-          background-position: 100% 50%;
-        }
-        100% {
-          background-position: 0% 50%;
-        }
-      }
-
-      /* depth + floating glass chips */
+      /* depth: a faint dot grid + softly drifting glass orbs (calmer than floating icons) */
       .auth__bg {
         position: absolute;
         inset: 0;
         pointer-events: none;
         overflow: hidden;
       }
-      .blob {
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+        background-size: 26px 26px;
+        mask-image: radial-gradient(circle at 50% 40%, #000 0%, transparent 75%);
+        -webkit-mask-image: radial-gradient(circle at 50% 40%, #000 0%, transparent 75%);
+        opacity: 0.5;
+      }
+      .orb {
         position: absolute;
         border-radius: 50%;
-        filter: blur(64px);
+        filter: blur(58px);
+        will-change: transform;
       }
-      .blob--a {
-        width: 460px;
-        height: 460px;
-        background: rgba(255, 255, 255, 0.3);
+      .orb--a {
+        width: 440px;
+        height: 440px;
+        background: rgba(255, 255, 255, 0.34);
         top: -150px;
-        left: -120px;
+        left: -110px;
+        animation: drift 16s ease-in-out infinite;
       }
-      .blob--b {
-        width: 380px;
-        height: 380px;
-        background: rgba(255, 255, 255, 0.16);
-        bottom: -140px;
-        right: -90px;
-      }
-      .deco {
-        position: absolute;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 22px;
+      .orb--b {
+        width: 360px;
+        height: 360px;
         background: rgba(255, 255, 255, 0.18);
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        backdrop-filter: blur(7px);
-        -webkit-backdrop-filter: blur(7px);
-        box-shadow: 0 12px 28px rgba(16, 24, 40, 0.18);
-        user-select: none;
-        line-height: 1;
-        animation: float 7s ease-in-out infinite;
+        bottom: -130px;
+        right: -90px;
+        animation: drift 20s ease-in-out infinite reverse;
       }
-      .deco--1 {
-        top: 9%;
-        left: 7%;
-        width: 84px;
-        height: 84px;
-        font-size: 40px;
-        animation-delay: 0s;
+      .orb--c {
+        width: 280px;
+        height: 280px;
+        background: rgba(255, 255, 255, 0.12);
+        top: 38%;
+        left: 60%;
+        animation: drift 24s ease-in-out infinite;
+        animation-delay: 3s;
       }
-      .deco--2 {
-        top: 16%;
-        right: 9%;
-        width: 64px;
-        height: 64px;
-        font-size: 30px;
-        animation-delay: 1.3s;
-      }
-      .deco--3 {
-        bottom: 14%;
-        left: 6%;
-        width: 72px;
-        height: 72px;
-        font-size: 34px;
-        animation-delay: 0.6s;
-      }
-      .deco--4 {
-        bottom: 9%;
-        right: 7%;
-        width: 92px;
-        height: 92px;
-        font-size: 44px;
-        animation-delay: 2s;
-      }
-      .deco--5 {
-        top: 50%;
-        left: 4%;
-        width: 56px;
-        height: 56px;
-        font-size: 26px;
-        animation-delay: 2.6s;
-      }
-      .deco--6 {
-        top: 62%;
-        right: 4%;
-        width: 60px;
-        height: 60px;
-        font-size: 28px;
-        animation-delay: 0.9s;
-      }
-      @keyframes float {
+      @keyframes drift {
         0%,
         100% {
-          transform: translateY(0);
+          transform: translate(0, 0);
         }
         50% {
-          transform: translateY(-14px);
+          transform: translate(30px, -28px);
         }
       }
 
@@ -359,6 +312,5 @@ export class AuthLayout {
   readonly subtitle = input('');
   /** '' | 'student' | 'recruiter' | 'admin' — themes the background, welcome copy + accent. */
   readonly portal = input<string>('');
-  readonly deco = computed(() => DECO[this.portal()] ?? DECO['']);
   readonly welcome = computed(() => WELCOME[this.portal()] ?? WELCOME['']);
 }

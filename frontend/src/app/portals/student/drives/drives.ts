@@ -20,6 +20,14 @@ const GROUP_LABEL: Record<EligibilityGroup, string> = {
   CLOSED: 'Closed',
 };
 
+/** Friendly empty-state copy per tab so no section ever reads as a blank page. */
+const EMPTY_STATE: Record<EligibilityGroup, { icon: string; title: string; sub: string }> = {
+  ELIGIBLE: { icon: '🎓', title: 'No eligible drives yet', sub: "They'll appear here as recruiters post drives you match." },
+  APPLIED: { icon: '📄', title: "You haven't applied yet", sub: 'Browse eligible drives and apply in a single click.' },
+  NOT_ELIGIBLE: { icon: '🔒', title: 'Nothing here', sub: "Drives you don't currently qualify for will show up here." },
+  CLOSED: { icon: '📁', title: 'No closed drives', sub: 'Drives that have ended will be archived here.' },
+};
+
 /**
  * Drive discovery (Story 9.4, the hero) — the flat drive list grouped client-side into the four
  * segmented sections, each card's affordance driven by eligibility, a detail modal with the eligibility
@@ -39,7 +47,11 @@ const GROUP_LABEL: Record<EligibilityGroup, string> = {
     } @else {
       <app-segmented-sections [sections]="sections()" [(activeKey)]="activeKey">
         @if (visible().length === 0) {
-          <p class="empty cc-body" role="status">{{ emptyCopy() }}</p>
+          <div class="card empty-card" role="status">
+            <span class="empty__icon" aria-hidden="true">{{ emptyState().icon }}</span>
+            <p class="empty__title cc-body-medium">{{ emptyState().title }}</p>
+            <p class="empty__sub cc-small">{{ emptyState().sub }}</p>
+          </div>
         } @else {
           <div class="grid">
             @for (d of visible(); track d.id) {
@@ -132,9 +144,31 @@ const GROUP_LABEL: Record<EligibilityGroup, string> = {
         margin: 0;
         color: var(--cc-color-danger);
       }
-      .empty {
-        margin-top: var(--cc-space-8);
+      .empty-card {
+        margin-top: var(--cc-space-6);
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0;
         color: var(--cc-color-text-secondary);
+        max-width: 380px;
       }
       .link {
         background: none;
@@ -161,6 +195,7 @@ export class DrivesPage {
   readonly sections = computed(() => driveSections(this.drives()));
   readonly visible = computed(() => this.drives().filter((d) => d.group === this.activeKey()));
   readonly checks = computed(() => (this.selected() ? eligibilityChecks(this.selected()!) : []));
+  readonly emptyState = computed(() => EMPTY_STATE[this.activeKey() as EligibilityGroup] ?? EMPTY_STATE.ELIGIBLE);
 
   constructor() {
     void this.reload();
@@ -175,11 +210,6 @@ export class DrivesPage {
   firstReason(d: StudentDrive): string | null {
     return firstFailedReason(d);
   }
-  emptyCopy(): string {
-    return this.activeKey() === 'ELIGIBLE'
-      ? 'No eligible drives yet — once your profile is approved, eligible drives appear here.'
-      : 'Nothing here yet.';
-  }
 
   openDetail(d: StudentDrive): void {
     this.selected.set(d);
@@ -191,8 +221,9 @@ export class DrivesPage {
     try {
       this.drives.set(await this.driveSvc.listDrives());
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load drives.');
     }
   }
 

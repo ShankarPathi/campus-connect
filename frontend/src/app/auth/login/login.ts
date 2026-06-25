@@ -2,7 +2,7 @@ import { Component, ElementRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Button, TextField } from '../../shared/ui';
+import { Button, TextField, ToastService } from '../../shared/ui';
 import { AuthService } from '../../core/auth/auth.service';
 import { Portal } from '../../core/auth/auth.models';
 import { toAuthErrorView } from '../../core/auth/auth.errors';
@@ -52,7 +52,10 @@ import { describeControlError } from '../field-errors';
           [error]="err('password', 'Password')"
         />
 
-        <app-button type="submit" [loading]="submitting()">Sign in</app-button>
+        <div class="actions">
+          <app-button type="submit" [loading]="submitting()">Sign in</app-button>
+          <app-button type="button" variant="secondary" (click)="reset()">Reset</app-button>
+        </div>
       </form>
 
       <div footer class="links">
@@ -69,6 +72,13 @@ import { describeControlError } from '../field-errors';
         display: flex;
         flex-direction: column;
         gap: var(--cc-space-4);
+      }
+      .actions {
+        display: flex;
+        gap: var(--cc-space-3);
+      }
+      .actions app-button:first-child {
+        flex: 1;
       }
       .form-error {
         margin: 0;
@@ -99,6 +109,7 @@ export class Login {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly toast = inject(ToastService);
 
   readonly portal = signal<Portal>('student');
   readonly submitting = signal(false);
@@ -143,21 +154,32 @@ export class Login {
     this.serverFields.set({});
     this.trimIdentityFields();
     if (this.form.invalid) {
+      this.formError.set('Please fill in the highlighted fields below.');
       this.focusFirstError();
       return;
     }
     this.submitting.set(true);
     try {
       await this.auth.login(this.portal(), this.form.getRawValue());
+      this.toast.success('Signed in successfully. Welcome back!');
       const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
       await this.router.navigateByUrl(returnUrl || `/${this.portal()}`);
     } catch (e) {
       const view = toAuthErrorView(e);
       this.formError.set(view.formMessage);
       this.serverFields.set(view.fieldErrors);
+      this.toast.error(view.formMessage ?? 'Could not sign in.');
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  /** Clear the form and any errors so the user can start over (UX-requested reset action). */
+  reset(): void {
+    this.form.reset({ collegeCode: '', email: '', password: '' });
+    this.formError.set(null);
+    this.serverFields.set({});
+    this.submitted.set(false);
   }
 
   /** Trim the identity fields so a pasted/autofilled leading/trailing space doesn't fail validation. */

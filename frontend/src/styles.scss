@@ -90,6 +90,7 @@ body {
 :root {
   --cc-portal-grad: linear-gradient(120deg, #6366f1, #4338ca);
   --cc-portal-soft: #eef2ff;
+  --cc-portal-soft-2: #e0e7ff;
   --cc-portal-on: #ffffff;
 }
 .portal--student {
@@ -98,6 +99,7 @@ body {
   --cc-color-primary-subtle: #eff6ff;
   --cc-portal-grad: linear-gradient(120deg, #3b82f6, #1d4ed8);
   --cc-portal-soft: #eff6ff;
+  --cc-portal-soft-2: #dbeafe;
 }
 .portal--recruiter {
   --cc-color-primary: #059669;
@@ -105,6 +107,7 @@ body {
   --cc-color-primary-subtle: #ecfdf5;
   --cc-portal-grad: linear-gradient(120deg, #10b981, #047857);
   --cc-portal-soft: #ecfdf5;
+  --cc-portal-soft-2: #d1fae5;
 }
 .portal--admin {
   --cc-color-primary: #7c3aed;
@@ -112,6 +115,7 @@ body {
   --cc-color-primary-subtle: #f5f3ff;
   --cc-portal-grad: linear-gradient(120deg, #8b5cf6, #6d28d9);
   --cc-portal-soft: #f5f3ff;
+  --cc-portal-soft-2: #ede9fe;
 }
 
 /* ── Colourful dashboard stat tiles. Add a tone class (.tone-blue etc.) to a `.card.tile`,
@@ -180,4 +184,40 @@ button.card:hover,
 .cc-h2,
 .cc-h3 {
   letter-spacing: -0.01em;
+}
+
+/* ── Tasteful per-portal accents (post-login only, scoped to .shell so the login card is untouched).
+   Implemented with ::before strips so they never fight each component's own border/box-shadow. ── */
+
+/* A thin portal-gradient top edge ties each content card to the active portal's colour.
+   Excludes the colourful stat tiles, the profile ring card, and loading skeletons. */
+.shell .card {
+  position: relative;
+}
+.shell .card:not(.tile):not(.tile-tint):not(.ring-card):not(.skeleton):not(.sk)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--cc-radius-lg) var(--cc-radius-lg) 0 0;
+  background: var(--cc-portal-grad, var(--cc-color-primary));
+  pointer-events: none;
+}
+
+/* A coloured accent bar before section sub-headings (e.g. "Pending actions", "By branch"). */
+.shell .section {
+  position: relative;
+  padding-left: var(--cc-space-3);
+}
+.shell .section::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.18em;
+  bottom: 0.18em;
+  width: 4px;
+  border-radius: var(--cc-radius-full);
+  background: var(--cc-portal-grad, var(--cc-color-primary));
 }

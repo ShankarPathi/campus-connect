@@ -1,4 +1,4 @@
-import { Component, forwardRef, input, signal } from '@angular/core';
+import { Component, computed, forwardRef, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 let uid = 0;
@@ -20,22 +20,47 @@ let uid = 0;
       <label class="field__label" [attr.for]="id">
         {{ label() }}@if (required()) {<span class="field__req" aria-hidden="true"> *</span>}
       </label>
-      <input
-        class="field__input"
-        [class.field__input--error]="!!error()"
-        [id]="id"
-        [type]="type()"
-        [attr.autocomplete]="autocomplete()"
-        [attr.inputmode]="inputmode()"
-        [attr.placeholder]="placeholder() || null"
-        [attr.aria-invalid]="error() ? 'true' : null"
-        [attr.aria-describedby]="describedBy()"
-        [attr.required]="required() ? '' : null"
-        [value]="value()"
-        [disabled]="disabled()"
-        (input)="onInput($event)"
-        (blur)="onTouched()"
-      />
+      <div class="field__wrap">
+        <input
+          class="field__input"
+          [class.field__input--error]="!!error()"
+          [class.field__input--toggle]="isPassword()"
+          [id]="id"
+          [type]="effectiveType()"
+          [attr.autocomplete]="autocomplete()"
+          [attr.inputmode]="inputmode()"
+          [attr.placeholder]="placeholder() || null"
+          [attr.aria-invalid]="error() ? 'true' : null"
+          [attr.aria-describedby]="describedBy()"
+          [attr.required]="required() ? '' : null"
+          [value]="value()"
+          [disabled]="disabled()"
+          (input)="onInput($event)"
+          (blur)="onTouched()"
+        />
+        @if (isPassword()) {
+          <button
+            type="button"
+            class="field__toggle"
+            (click)="toggleReveal()"
+            [attr.aria-label]="revealed() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="revealed()"
+            tabindex="-1"
+          >
+            @if (revealed()) {
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            } @else {
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            }
+          </button>
+        }
+      </div>
       @if (error()) {
         <p class="field__error" [id]="id + '-err'">{{ error() }}</p>
       } @else if (hint()) {
@@ -81,6 +106,40 @@ let uid = 0;
       .field__input--error {
         border-color: var(--cc-color-danger);
       }
+      .field__wrap {
+        position: relative;
+        display: flex;
+      }
+      .field__input {
+        flex: 1;
+        width: 100%;
+      }
+      .field__input--toggle {
+        padding-right: 44px;
+      }
+      .field__toggle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--cc-color-text-secondary);
+        cursor: pointer;
+        border-radius: var(--cc-radius-sm);
+      }
+      .field__toggle:hover {
+        color: var(--cc-color-primary);
+      }
+      .field__toggle:focus-visible {
+        outline: 2px solid var(--cc-color-primary);
+        outline-offset: -2px;
+      }
       .field__error {
         font: var(--cc-text-small);
         color: var(--cc-color-danger);
@@ -108,6 +167,18 @@ export class TextField implements ControlValueAccessor {
 
   readonly value = signal('');
   readonly disabled = signal(false);
+  /** Whether a password field is currently shown as plain text (eye toggle). Always starts hidden. */
+  protected readonly revealed = signal(false);
+
+  protected readonly isPassword = computed(() => this.type() === 'password');
+  /** The actual input type — a revealed password renders as text so the user can read it. */
+  protected readonly effectiveType = computed(() =>
+    this.isPassword() && this.revealed() ? 'text' : this.type(),
+  );
+
+  protected toggleReveal(): void {
+    this.revealed.update((v) => !v);
+  }
 
   private onChange: (v: string) => void = () => {};
   protected onTouched: () => void = () => {};

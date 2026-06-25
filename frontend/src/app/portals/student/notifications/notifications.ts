@@ -1,7 +1,19 @@
 import { Component, inject, signal } from '@angular/core';
 import { Button, ToastService } from '../../../shared/ui';
+import { toAuthErrorView } from '../../../core/auth/auth.errors';
 import { StudentNotificationsService } from '../student.services';
 import { StudentNotification } from '../student.models';
+
+/** A leading glyph per notification type so the feed reads by icon + text, not text alone. */
+function notificationIcon(type: string | null | undefined): string {
+  const t = (type ?? '').toUpperCase();
+  if (t.includes('OFFER')) return '🎁';
+  if (t.includes('DRIVE')) return '📢';
+  if (t.includes('PLACE')) return '🏆';
+  if (t.includes('PROFILE') || t.includes('APPROV') || t.includes('REJECT')) return '✅';
+  if (t.includes('APPLI') || t.includes('SHORTLIST') || t.includes('INTERVIEW') || t.includes('SELECT')) return '📄';
+  return '🔔';
+}
 
 /**
  * Student Notifications screen (Story 9.4, AC10). Lists the student's notifications newest-first with
@@ -30,11 +42,16 @@ import { StudentNotification } from '../student.models';
           <app-button size="sm" variant="secondary" (click)="reload()">Retry</app-button>
         </div>
       } @else if (items().length === 0) {
-        <p class="cc-body state">You're all caught up — no notifications yet.</p>
+        <div class="card empty" role="status">
+          <span class="empty__icon" aria-hidden="true">🔔</span>
+          <p class="empty__title cc-body-medium">You're all caught up</p>
+          <p class="empty__sub cc-small">New updates about your applications and offers will appear here.</p>
+        </div>
       } @else {
         <ul class="list">
           @for (n of items(); track n.id) {
             <li class="row" [class.row--unread]="!n.isRead">
+              <span class="row__icon" aria-hidden="true">{{ icon(n.type) }}</span>
               <div class="row__main">
                 <div class="row__top">
                   @if (!n.isRead) {
@@ -88,16 +105,64 @@ import { StudentNotification } from '../student.models';
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        gap: var(--cc-space-4);
+        gap: var(--cc-space-3);
         padding: var(--cc-space-4);
         background: var(--cc-color-surface-raised);
         border: 1px solid var(--cc-color-border);
         border-left: 3px solid transparent;
         border-radius: var(--cc-radius-lg);
+        box-shadow: var(--cc-shadow-sm);
       }
       .row--unread {
         border-left-color: var(--cc-color-primary);
         background: var(--cc-color-primary-subtle);
+      }
+      .row__icon {
+        font-size: 18px;
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        flex: none;
+      }
+      .row--unread .row__icon {
+        background: #fff;
+      }
+      .row__main {
+        flex: 1;
+      }
+      .empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0;
+        color: var(--cc-color-text-secondary);
+        max-width: 380px;
       }
       .row__main {
         display: flex;
@@ -139,6 +204,9 @@ export class NotificationsPage {
   readonly error = signal(false);
   readonly unreadCount = this.service.unreadCount;
 
+  /** Template passthrough — the leading glyph for a notification's type. */
+  readonly icon = notificationIcon;
+
   constructor() {
     void this.reload();
   }
@@ -150,8 +218,9 @@ export class NotificationsPage {
       const list = await this.service.list();
       this.items.set(list.items);
       this.service.unreadCount.set(list.unreadCount);
-    } catch {
+    } catch (e) {
       this.error.set(true);
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load your notifications.');
     } finally {
       this.loading.set(false);
     }

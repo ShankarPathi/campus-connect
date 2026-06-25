@@ -8,7 +8,7 @@ const PROFILE = (over: Record<string, unknown> = {}) => ({
   studentId: 's1',
   rollNumber: 'R1',
   batch: '2026',
-  personal: { fullName: 'Anjali', phone: null, gender: null, dateOfBirth: null, address: null },
+  personal: { fullName: 'Anjali', phone: '9876543210', gender: null, dateOfBirth: null, address: null },
   academic: { branch: 'CSE', cgpa: 8.1, activeBacklogs: 0 },
   placement: { skills: ['Java', 'SQL'], expectedRole: null, about: null },
   profileApprovalStatus: 'DRAFT',

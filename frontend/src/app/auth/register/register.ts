@@ -52,7 +52,10 @@ import { describeControlError } from '../field-errors';
             <app-text-field label="Company description" formControlName="companyDescription" [error]="err('companyDescription', 'Company description')" />
           }
 
-          <app-button type="submit" [loading]="submitting()">Create account</app-button>
+          <div class="actions">
+            <app-button type="submit" [loading]="submitting()">Create account</app-button>
+            <app-button type="button" variant="secondary" (click)="reset()">Reset</app-button>
+          </div>
         </form>
       }
 
@@ -67,6 +70,13 @@ import { describeControlError } from '../field-errors';
         display: flex;
         flex-direction: column;
         gap: var(--cc-space-4);
+      }
+      .actions {
+        display: flex;
+        gap: var(--cc-space-3);
+      }
+      .actions app-button:first-child {
+        flex: 1;
       }
       .form-error {
         margin: 0;
@@ -175,6 +185,7 @@ export class Register {
     companyName.updateValueAndValidity({ emitEvent: false });
 
     if (this.form.invalid || this.mismatch()) {
+      this.formError.set('Please fill in the highlighted fields below.');
       this.focusFirstError();
       return;
     }
@@ -190,6 +201,25 @@ export class Register {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  /** Clear every field and error so the user can start the form over. */
+  reset(): void {
+    this.form.reset({
+      collegeCode: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      companyName: '',
+      companyWebsite: '',
+      industry: '',
+      recruiterDesignation: '',
+      contactPhone: '',
+      companyDescription: '',
+    });
+    this.formError.set(null);
+    this.serverFields.set({});
+    this.submitted.set(false);
   }
 
   private buildBody(): RegisterStudentRequest | RegisterRecruiterRequest {
