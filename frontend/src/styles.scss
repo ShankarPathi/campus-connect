@@ -92,6 +92,8 @@ body {
   --cc-portal-soft: #eef2ff;
   --cc-portal-soft-2: #e0e7ff;
   --cc-portal-on: #ffffff;
+  /* Per-portal faint corner illustration watermark (swap these files to change the artwork). */
+  --cc-portal-bg: none;
 }
 .portal--student {
   --cc-color-primary: #2563eb;
@@ -100,6 +102,7 @@ body {
   --cc-portal-grad: linear-gradient(120deg, #3b82f6, #1d4ed8);
   --cc-portal-soft: #eff6ff;
   --cc-portal-soft-2: #dbeafe;
+  --cc-portal-bg: url('/backgrounds/student.svg');
 }
 .portal--recruiter {
   --cc-color-primary: #059669;
@@ -108,6 +111,7 @@ body {
   --cc-portal-grad: linear-gradient(120deg, #10b981, #047857);
   --cc-portal-soft: #ecfdf5;
   --cc-portal-soft-2: #d1fae5;
+  --cc-portal-bg: url('/backgrounds/recruiter.svg');
 }
 .portal--admin {
   --cc-color-primary: #7c3aed;
@@ -116,6 +120,7 @@ body {
   --cc-portal-grad: linear-gradient(120deg, #8b5cf6, #6d28d9);
   --cc-portal-soft: #f5f3ff;
   --cc-portal-soft-2: #ede9fe;
+  --cc-portal-bg: url('/backgrounds/admin.svg');
 }
 
 /* ── Colourful dashboard stat tiles. Add a tone class (.tone-blue etc.) to a `.card.tile`,

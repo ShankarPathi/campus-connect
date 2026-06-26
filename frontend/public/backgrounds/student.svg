@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none">
+  <g fill="#2563eb" fill-opacity="0.20" stroke="#2563eb" stroke-opacity="0.22" stroke-width="3">
+    <!-- campus building -->
+    <rect x="120" y="470" width="300" height="230" rx="6"/>
+    <polygon points="120,470 270,380 420,470"/>
+    <rect x="180" y="540" width="40" height="80" rx="4"/>
+    <rect x="250" y="540" width="40" height="80" rx="4"/>
+    <rect x="320" y="540" width="40" height="80" rx="4"/>
+    <rect x="258" y="430" width="24" height="50" rx="3"/>
+    <!-- stack of books -->
+    <rect x="760" y="610" width="300" height="34" rx="6"/>
+    <rect x="785" y="572" width="260" height="34" rx="6"/>
+    <rect x="810" y="534" width="220" height="34" rx="6"/>
+    <!-- graduation cap on the books -->
+    <polygon points="920,440 1050,490 920,540 790,490"/>
+    <path d="M870 512 v40 q50 30 100 0 v-40" />
+    <line x1="1050" y1="490" x2="1050" y2="560"/>
+    <circle cx="1050" cy="565" r="9"/>
+  </g>
+  <!-- soft scattered stars / sparks -->
+  <g fill="#3b82f6" fill-opacity="0.20">
+    <circle cx="560" cy="180" r="6"/>
+    <circle cx="690" cy="250" r="4"/>
+    <circle cx="980" cy="200" r="5"/>
+    <circle cx="1080" cy="300" r="4"/>
+    <circle cx="470" cy="300" r="4"/>
+  </g>
+</svg>

@@ -89,6 +89,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
            vertical wash. Gives the canvas depth + colour so the white cards pop instead of
            floating on near-white. */
         background:
+          var(--cc-portal-bg, none) right -40px bottom -20px / min(620px, 46%) no-repeat,
           radial-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
           radial-gradient(1100px 460px at 100% -140px, var(--cc-portal-soft-2), transparent 70%),
           linear-gradient(180deg, var(--cc-portal-soft) 0%, var(--cc-color-surface) 100%);
