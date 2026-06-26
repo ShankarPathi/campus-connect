@@ -22,7 +22,11 @@ import { futureDateTime, positiveNumber } from '../../../shared/forms/validators
     } @else if (state() === 'error') {
       <p class="cc-body">We couldn't load this. <button class="link" type="button" (click)="load()">Try again</button></p>
     } @else if (rows().length === 0) {
-      <p class="empty cc-body" role="status">No selected applicants yet — select final candidates from the Applicants tab to release offers.</p>
+      <div class="card empty" role="status">
+        <span class="empty__icon" aria-hidden="true">🎁</span>
+        <p class="empty__title cc-body-medium">No offers to manage yet</p>
+        <p class="empty__sub cc-small">Select final candidates from the Applicants tab to release offers here.</p>
+      </div>
     } @else {
       <ul class="list">
         @for (a of rows(); track a.applicationId) {
@@ -88,8 +92,34 @@ import { futureDateTime, positiveNumber } from '../../../shared/forms/validators
         color: var(--cc-color-text-secondary);
       }
       .empty {
-        margin-top: var(--cc-space-8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0;
         color: var(--cc-color-text-secondary);
+        max-width: 380px;
       }
       .form {
         display: flex;
@@ -176,8 +206,9 @@ export class RecruiterOffers {
       const page = await this.applicantSvc.list(this.driveId(), { status: ['SELECTED', ...OFFER_STATUSES], pageSize: 200 });
       this.rows.set(page.items);
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load offers.');
     }
   }
 

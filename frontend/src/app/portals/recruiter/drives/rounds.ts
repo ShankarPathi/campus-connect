@@ -84,16 +84,25 @@ import { futureDateTime } from '../../../shared/forms/validators';
 
     <app-modal [(open)]="resultsOpen" [title]="'Record results · Round ' + (activeRound()?.roundOrder ?? '')">
       @if (applicants().length === 0) {
-        <p class="cc-body muted">No in-progress applicants to record.</p>
+        <div class="modal-empty">
+          <span class="modal-empty__icon" aria-hidden="true">🧑‍💻</span>
+          <p class="cc-body muted">No in-progress applicants to record for this round.</p>
+        </div>
       } @else {
         <ul class="results">
           @for (a of applicants(); track a.applicationId) {
             <li class="resrow">
-              <span class="cc-body">{{ a.fullName }} <span class="muted">· {{ a.rollNumber }}</span></span>
+              <span class="resrow__name cc-body-medium">{{ a.fullName }} <span class="muted">· {{ a.rollNumber }}</span></span>
               <div class="seg" role="radiogroup" [attr.aria-label]="'Result for ' + a.fullName">
                 @for (opt of resultOptions; track opt) {
-                  <button type="button" class="seg__opt" [class.seg__opt--on]="resultFor(a.applicationId) === opt" (click)="setResult(a.applicationId, opt)">
-                    {{ opt === 'PASS' ? 'Pass' : opt === 'FAIL' ? 'Fail' : 'Absent' }}
+                  <button
+                    type="button"
+                    class="seg__opt"
+                    [class.seg__opt--on]="resultFor(a.applicationId) === opt"
+                    [attr.data-r]="opt"
+                    (click)="setResult(a.applicationId, opt)"
+                  >
+                    {{ opt === 'PASS' ? '✓ Pass' : opt === 'FAIL' ? '✕ Fail' : 'Absent' }}
                   </button>
                 }
               </div>
@@ -180,6 +189,14 @@ import { futureDateTime } from '../../../shared/forms/validators';
         align-items: center;
         justify-content: space-between;
         gap: var(--cc-space-3);
+        padding: var(--cc-space-3) 0;
+        border-bottom: 1px solid var(--cc-color-border);
+      }
+      .resrow:last-child {
+        border-bottom: none;
+      }
+      .resrow__name {
+        min-width: 0;
       }
       .seg {
         display: inline-flex;
@@ -187,6 +204,7 @@ import { futureDateTime } from '../../../shared/forms/validators';
         padding: var(--cc-space-1);
         background: var(--cc-color-surface);
         border-radius: var(--cc-radius-md);
+        flex: none;
       }
       .seg__opt {
         font: var(--cc-text-caption);
@@ -201,6 +219,30 @@ import { futureDateTime } from '../../../shared/forms/validators';
         background: var(--cc-color-surface-raised);
         color: var(--cc-color-primary);
         box-shadow: var(--cc-shadow-sm);
+      }
+      /* colour the chosen result so a recruiter reads the outcome at a glance */
+      .seg__opt--on[data-r='PASS'] {
+        background: var(--cc-color-success-subtle, #ecfdf5);
+        color: var(--cc-color-success);
+      }
+      .seg__opt--on[data-r='FAIL'] {
+        background: var(--cc-color-danger-subtle, #fef2f2);
+        color: var(--cc-color-danger);
+      }
+      .seg__opt--on[data-r='ABSENT'] {
+        background: #fffbeb;
+        color: #d97706;
+      }
+      .modal-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-6) var(--cc-space-4);
+      }
+      .modal-empty__icon {
+        font-size: 34px;
       }
       .link {
         background: none;
@@ -280,8 +322,9 @@ export class RecruiterRounds {
       const res = await this.roundSvc.getRounds(this.driveId());
       this.rounds.set(res.rounds);
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load rounds.');
     }
   }
 

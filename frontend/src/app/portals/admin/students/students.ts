@@ -19,9 +19,14 @@ const FILTERS: ProfileApprovalStatus[] = ['PENDING_APPROVAL', 'APPROVED', 'REJEC
   template: `
     <div class="head">
       <h1 class="cc-h2">Student profiles</h1>
-      <div class="head__actions">
+      <div class="season">
+        <span class="season__icon" aria-hidden="true">🔐</span>
+        <div class="season__text">
+          <span class="cc-body-medium">Placement season</span>
+          <span class="cc-caption season__sub">Lock to freeze all profiles from editing</span>
+        </div>
         <app-button size="sm" variant="secondary" [loading]="acting()" (click)="askLock('lock')">Lock season</app-button>
-        <app-button size="sm" variant="ghost" [loading]="acting()" (click)="askLock('unlock')">Unlock</app-button>
+        <app-button size="sm" variant="secondary" [loading]="acting()" (click)="askLock('unlock')">Unlock</app-button>
       </div>
     </div>
 
@@ -36,7 +41,11 @@ const FILTERS: ProfileApprovalStatus[] = ['PENDING_APPROVAL', 'APPROVED', 'REJEC
     } @else if (state() === 'error') {
       <p class="cc-body">We couldn't load profiles. <button class="link" type="button" (click)="load()">Try again</button></p>
     } @else if (rows().length === 0) {
-      <p class="empty cc-body" role="status">Nothing pending here — you're all caught up.</p>
+      <div class="card empty" role="status">
+        <span class="empty__icon" aria-hidden="true">✅</span>
+        <p class="empty__title cc-body-medium">You're all caught up</p>
+        <p class="empty__sub cc-small">No {{ label(status()).toLowerCase() }} profiles right now.</p>
+      </div>
     } @else {
       <ul class="list">
         @for (p of rows(); track p.studentId) {
@@ -108,9 +117,34 @@ const FILTERS: ProfileApprovalStatus[] = ['PENDING_APPROVAL', 'APPROVED', 'REJEC
       .head h1 {
         margin: 0;
       }
-      .head__actions {
+      .season {
         display: flex;
-        gap: var(--cc-space-2);
+        align-items: center;
+        gap: var(--cc-space-3);
+        padding: var(--cc-space-3) var(--cc-space-4);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .season__icon {
+        font-size: 18px;
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-color-surface-raised);
+        flex: none;
+      }
+      .season__text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+        margin-right: var(--cc-space-2);
+      }
+      .season__sub {
+        color: var(--cc-color-text-secondary);
       }
       .filters {
         display: flex;
@@ -162,7 +196,32 @@ const FILTERS: ProfileApprovalStatus[] = ['PENDING_APPROVAL', 'APPROVED', 'REJEC
         margin: var(--cc-space-1) 0 0;
       }
       .empty {
-        margin-top: var(--cc-space-8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0;
         color: var(--cc-color-text-secondary);
       }
       .form {
@@ -246,11 +305,12 @@ export class StudentApprovalsPage {
       }
       this.rows.set(rows);
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       if (seq !== this.loadSeq) {
         return;
       }
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load profiles.');
     }
   }
 

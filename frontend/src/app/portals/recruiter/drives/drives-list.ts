@@ -25,7 +25,12 @@ import { driveStatusLabel, isDriveEditable } from '../recruiter.mappers';
     } @else if (state() === 'error') {
       <p class="cc-body">We couldn't load your drives. <button class="link" type="button" (click)="reload()">Try again</button></p>
     } @else if (drives().length === 0) {
-      <p class="empty cc-body" role="status">No drives yet — create your first drive to start hiring.</p>
+      <div class="card empty" role="status">
+        <span class="empty__icon" aria-hidden="true">💼</span>
+        <p class="empty__title cc-body-medium">No drives yet</p>
+        <p class="empty__sub cc-small">Create your first drive to start hiring campus talent.</p>
+        <a routerLink="/recruiter/drives/new"><app-button size="sm">Create a drive</app-button></a>
+      </div>
     } @else {
       <ul class="list">
         @for (d of drives(); track d.id) {
@@ -110,8 +115,34 @@ import { driveStatusLabel, isDriveEditable } from '../recruiter.mappers';
         color: var(--cc-color-danger);
       }
       .empty {
-        margin-top: var(--cc-space-8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0 0 var(--cc-space-2);
         color: var(--cc-color-text-secondary);
+        max-width: 380px;
       }
       .link-plain {
         color: var(--cc-color-text);
@@ -157,8 +188,9 @@ export class DrivesListPage {
     try {
       this.drives.set(await this.driveSvc.list());
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load your drives.');
     }
   }
 

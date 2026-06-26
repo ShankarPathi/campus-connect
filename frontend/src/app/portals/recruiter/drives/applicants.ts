@@ -58,7 +58,11 @@ const PAGE_SIZE = 20;
     } @else if (state() === 'error') {
       <p class="cc-body">We couldn't load applicants. <button class="link" type="button" (click)="load()">Try again</button></p>
     } @else if (rows().length === 0) {
-      <p class="empty cc-body" role="status">No applicants match — adjust the filters or check back once students apply.</p>
+      <div class="card empty" role="status">
+        <span class="empty__icon" aria-hidden="true">🧑‍💻</span>
+        <p class="empty__title cc-body-medium">No applicants match</p>
+        <p class="empty__sub cc-small">Adjust the filters above, or check back once students apply to this drive.</p>
+      </div>
     } @else {
       <table class="table">
         <thead>
@@ -198,8 +202,34 @@ const PAGE_SIZE = 20;
         color: var(--cc-color-text-secondary);
       }
       .empty {
-        margin-top: var(--cc-space-8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--cc-space-2);
+        padding: var(--cc-space-10) var(--cc-space-6);
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+      }
+      .empty__icon {
+        font-size: 40px;
+        width: 80px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--cc-radius-full);
+        background: var(--cc-portal-soft, var(--cc-color-primary-subtle));
+        margin-bottom: var(--cc-space-2);
+      }
+      .empty__title {
+        margin: 0;
+      }
+      .empty__sub {
+        margin: 0;
         color: var(--cc-color-text-secondary);
+        max-width: 380px;
       }
       .pager {
         display: flex;
@@ -278,8 +308,9 @@ export class RecruiterApplicants {
       this.rows.set(res.items);
       this.totalPages.set(res.totalPages);
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load applicants.');
     }
   }
 

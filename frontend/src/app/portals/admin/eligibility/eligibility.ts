@@ -18,6 +18,7 @@ const NUMERIC = /^\d*\.?\d+$/;
   imports: [ReactiveFormsModule, Button, TextField],
   template: `
     <h1 class="cc-h2">Eligibility policy</h1>
+    <p class="cc-body sub">Set the college-wide rules that decide which students can apply to drives.</p>
 
     @if (state() === 'loading') {
       <div class="card sk"></div>
@@ -59,8 +60,12 @@ const NUMERIC = /^\d*\.?\d+$/;
   `,
   styles: [
     `
-      h1 {
+      .sub {
         margin: 0 0 var(--cc-space-6);
+        color: var(--cc-color-text-secondary);
+      }
+      h1 {
+        margin: 0 0 var(--cc-space-2);
       }
       .card {
         background: var(--cc-color-surface-raised);
@@ -127,8 +132,9 @@ export class EligibilityPolicyPage {
     try {
       this.applyPolicy(await this.svc.get());
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load the eligibility policy.');
     }
   }
 

@@ -21,7 +21,7 @@ import { isDriveEditable } from '../recruiter.mappers';
       @if (formError()) {
         <p class="form-error" role="alert">{{ formError() }}</p>
       }
-      <app-text-field label="Role" formControlName="role" [error]="err('role', 'Role')" />
+      <app-text-field label="Role" formControlName="role" [required]="true" [error]="err('role', 'Role')" />
       <app-text-field label="Package (LPA)" type="text" inputmode="decimal" formControlName="packageLpa" [error]="err('packageLpa', 'Package')" />
       <app-text-field label="Location" formControlName="location" />
       <app-text-field label="Openings" type="text" inputmode="numeric" formControlName="openings" [error]="err('openings', 'Openings')" />
@@ -208,6 +208,7 @@ export class DriveForm {
     this.formError.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.formError.set('Please fill in the required fields (marked *) below.');
       return;
     }
     this.saving.set(true);
@@ -218,7 +219,9 @@ export class DriveForm {
       this.toast.success(existing ? 'Drive updated.' : 'Drive draft created.');
       this.saved.emit(result);
     } catch (e) {
-      this.formError.set(toAuthErrorView(e).formMessage ?? 'Could not save the drive.');
+      const msg = toAuthErrorView(e).formMessage ?? 'Could not save the drive.';
+      this.formError.set(msg);
+      this.toast.error(msg);
     } finally {
       this.saving.set(false);
     }
@@ -232,9 +235,30 @@ export class DriveForm {
   imports: [DriveForm],
   template: `
     <h1 class="cc-h2">Create a drive</h1>
-    <app-recruiter-drive-form (saved)="onSaved($event)" />
+    <p class="cc-body sub">Set the role, package and eligibility. You can save a draft now and submit it for approval later.</p>
+    <div class="card panel">
+      <app-recruiter-drive-form (saved)="onSaved($event)" />
+    </div>
   `,
-  styles: [`h1 { margin: 0 0 var(--cc-space-6); }`],
+  styles: [
+    `
+      h1 {
+        margin: 0 0 var(--cc-space-2);
+      }
+      .sub {
+        margin: 0 0 var(--cc-space-6);
+        color: var(--cc-color-text-secondary);
+      }
+      .panel {
+        background: var(--cc-color-surface-raised);
+        border: 1px solid var(--cc-color-border);
+        border-radius: var(--cc-radius-lg);
+        box-shadow: var(--cc-shadow-sm);
+        padding: var(--cc-space-6);
+        max-width: 620px;
+      }
+    `,
+  ],
 })
 export class DriveFormPage {
   private readonly router = inject(Router);

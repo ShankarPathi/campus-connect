@@ -178,8 +178,9 @@ export class ReportsPage {
     try {
       this.report.set(await this.svc.report());
       this.state.set('ready');
-    } catch {
+    } catch (e) {
       this.state.set('error');
+      this.toast.error(toAuthErrorView(e).formMessage ?? 'Could not load the reports.');
     }
   }
 
