@@ -9,6 +9,8 @@ import com.campusconnect.common.repository.PlacementRecordRepository;
 import com.campusconnect.common.repository.StudentProfileRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -91,7 +93,7 @@ public class ReportService {
                     r.getCompany(),
                     r.getCtc() == null ? null : r.getCtc().toString(),
                     r.getRole(),
-                    r.getJoiningDate() == null ? null : r.getJoiningDate().toString()));
+                    dateOnly(r.getJoiningDate())));
         }
         return sb.toString();
     }
@@ -111,6 +113,15 @@ public class ReportService {
     /** Null-safe full name (the embedded {@code personal} sub-doc). */
     private static String nameOf(StudentProfile p) {
         return p == null || p.getPersonal() == null ? null : p.getPersonal().getFullName();
+    }
+
+    /**
+     * Joining date as a plain calendar date (UTC), e.g. {@code 2026-10-21} — the stored value is an
+     * {@link Instant}, so a bare {@code toString()} would leak the full machine timestamp
+     * ({@code 2026-10-21T06:55:43.641Z}) into the placements CSV column.
+     */
+    private static String dateOnly(java.time.Instant instant) {
+        return instant == null ? null : LocalDate.ofInstant(instant, ZoneOffset.UTC).toString();
     }
 
     private static String row(String... fields) {
