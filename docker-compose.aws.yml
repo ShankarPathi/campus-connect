@@ -20,12 +20,17 @@ x-service-env: &service-env
   # Plain HTTP (no TLS yet) → the refresh cookie must NOT be Secure or the browser drops it.
   APP_AUTH_COOKIE_SECURE: "false"
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
-  # Trim each JVM hard so 4 services fit a 1 GB box (+ swap). SerialGC = lowest-memory collector.
-  JAVA_TOOL_OPTIONS: "-Xmx200m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Xss512k"
+  # Trim each JVM so 4 services fit a 1 GB box (+ swap). SerialGC = lowest-memory collector.
+  # NOTE: do NOT shrink -Xss here — a tiny thread stack breaks the Atlas TLS handshake.
+  # Force TLS 1.2 (avoids a TLS 1.3 handshake quirk that Atlas rejects with "internal_error").
+  JAVA_TOOL_OPTIONS: "-Xmx220m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Djdk.tls.client.protocols=TLSv1.2"
 
 x-service-defaults: &service-defaults
   restart: unless-stopped
   networks: [cc-net]
+  # tini as PID 1 reaps the health-check child processes (otherwise zombies pile up and
+  # exhaust PIDs/threads on the small box, which also breaks new TLS connections).
+  init: true
 
 services:
   student-service:
@@ -54,7 +59,7 @@ services:
       STUDENT_SERVICE_URI: http://student-service:8081
       RECRUITER_SERVICE_URI: http://recruiter-service:8082
       ADMIN_SERVICE_URI: http://admin-service:8083
-      JAVA_TOOL_OPTIONS: "-Xmx160m -XX:MaxMetaspaceSize=112m -XX:+UseSerialGC -Xss512k"
+      JAVA_TOOL_OPTIONS: "-Xmx160m -XX:MaxMetaspaceSize=112m -XX:+UseSerialGC"
     depends_on:
       - student-service
       - recruiter-service
