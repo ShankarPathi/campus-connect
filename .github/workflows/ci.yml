@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [api-gateway, student-service, recruiter-service, admin-service]
+        service: [api-gateway, student-service, recruiter-service, admin-service, frontend]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        service: [api-gateway, student-service, recruiter-service, admin-service]
+        service: [api-gateway, student-service, recruiter-service, admin-service, frontend]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -172,12 +172,14 @@ jobs:
             type=raw,value=latest
             type=sha,format=long
 
-      - name: Build & push ${{ matrix.service }} (linux/arm64)
+      - name: Build & push ${{ matrix.service }} (linux/amd64)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.service }}/Dockerfile
-          platforms: linux/arm64
+          # amd64 to run on AWS free-tier (t2/t3.micro are Intel). Switch to
+          # linux/amd64,linux/arm64 when also targeting Oracle's ARM (Ampere) box.
+          platforms: linux/amd64
           push: true
           provenance: false # single-arch image, not a multi-arch index — plain `docker pull`/compose on the VM
           tags: ${{ steps.meta.outputs.tags }}

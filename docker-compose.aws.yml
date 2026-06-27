@@ -1,0 +1,74 @@
+# Campus Connect — LIGHTWEIGHT deploy for a 1 GB AWS free-tier box (amd64).
+#
+# Differs from docker-compose.prod.yml (which targets a 24 GB box): Mongo is external
+# (MongoDB Atlas), and there is NO local Mongo / MinIO / monitoring / Caddy — the RAM
+# just isn't there. The frontend (nginx) serves the SPA and proxies /api → gateway on
+# port 80 (plain HTTP on the instance IP; add a domain + TLS later or move to Oracle).
+#
+#   cp .env.aws.example .env      # fill SPRING_MONGODB_URI, JWT_SECRET, GHCR_OWNER
+#   docker compose -f docker-compose.aws.yml up -d
+#
+# NOTE: file storage (MinIO) is omitted to save RAM, so résumé upload / offer-PDF download
+# won't work on this box. Everything else (logins, dashboards, drives, applications, offers,
+# reports) works against the migrated Atlas data.
+
+# Shared env for the three role services.
+x-service-env: &service-env
+  # Spring Boot 4 reads the Mongo URI from spring.mongodb.uri (NOT spring.data.mongodb.uri).
+  SPRING_MONGODB_URI: ${SPRING_MONGODB_URI:?set SPRING_MONGODB_URI in .env (your Atlas connection string)}
+  MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+  # Plain HTTP (no TLS yet) → the refresh cookie must NOT be Secure or the browser drops it.
+  APP_AUTH_COOKIE_SECURE: "false"
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+  # Trim each JVM hard so 4 services fit a 1 GB box (+ swap). SerialGC = lowest-memory collector.
+  JAVA_TOOL_OPTIONS: "-Xmx200m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Xss512k"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks: [cc-net]
+
+services:
+  student-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER in .env (lowercase ghcr owner)}/campus-connect-student-service:latest
+    environment:
+      <<: *service-env
+
+  recruiter-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/campus-connect-recruiter-service:latest
+    environment:
+      <<: *service-env
+
+  admin-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/campus-connect-admin-service:latest
+    environment:
+      <<: *service-env
+
+  api-gateway:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/campus-connect-api-gateway:latest
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      STUDENT_SERVICE_URI: http://student-service:8081
+      RECRUITER_SERVICE_URI: http://recruiter-service:8082
+      ADMIN_SERVICE_URI: http://admin-service:8083
+      JAVA_TOOL_OPTIONS: "-Xmx160m -XX:MaxMetaspaceSize=112m -XX:+UseSerialGC -Xss512k"
+    depends_on:
+      - student-service
+      - recruiter-service
+      - admin-service
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER}/campus-connect-frontend:latest
+    restart: unless-stopped
+    networks: [cc-net]
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+
+networks:
+  cc-net:
+    driver: bridge
