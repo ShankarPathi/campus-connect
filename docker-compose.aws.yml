@@ -1,38 +1,73 @@
 # Campus Connect — LIGHTWEIGHT deploy for a 1 GB AWS free-tier box (amd64).
 #
-# Differs from docker-compose.prod.yml (which targets a 24 GB box): Mongo is external
-# (MongoDB Atlas), and there is NO local Mongo / MinIO / monitoring / Caddy — the RAM
-# just isn't there. The frontend (nginx) serves the SPA and proxies /api → gateway on
-# port 80 (plain HTTP on the instance IP; add a domain + TLS later or move to Oracle).
+# Runs MongoDB ON the box (plain, no TLS) instead of Atlas — the Java driver's TLS
+# handshake to Atlas fails on this host (a known JSSE/Atlas issue), so we sidestep it.
+# A one-shot seed restores the demo data (logins + drives + offers) on first boot.
+# Frontend (nginx) serves the SPA + proxies /api → gateway on port 80.
 #
-#   cp .env.aws.example .env      # fill SPRING_MONGODB_URI, JWT_SECRET, GHCR_OWNER
+#   cp .env.aws.example .env      # fill JWT_SECRET + GHCR_OWNER (Mongo URI is NOT needed now)
 #   docker compose -f docker-compose.aws.yml up -d
 #
 # NOTE: file storage (MinIO) is omitted to save RAM, so résumé upload / offer-PDF download
-# won't work on this box. Everything else (logins, dashboards, drives, applications, offers,
-# reports) works against the migrated Atlas data.
+# won't work. Everything else (logins, dashboards, drives, applications, offers, reports) works.
 
-# Shared env for the three role services.
 x-service-env: &service-env
-  # Spring Boot 4 reads the Mongo URI from spring.mongodb.uri (NOT spring.data.mongodb.uri).
-  SPRING_MONGODB_URI: ${SPRING_MONGODB_URI:?set SPRING_MONGODB_URI in .env (your Atlas connection string)}
+  # Mongo runs on the box (service name "mongodb"), plaintext — no TLS to fail.
+  SPRING_MONGODB_URI: mongodb://mongodb:27017/campusconnect
   MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
   # Plain HTTP (no TLS yet) → the refresh cookie must NOT be Secure or the browser drops it.
   APP_AUTH_COOKIE_SECURE: "false"
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
-  # Trim each JVM so 4 services fit a 1 GB box (+ swap). SerialGC = lowest-memory collector.
-  # NOTE: do NOT shrink -Xss here — a tiny thread stack breaks the Atlas TLS handshake.
-  # Force TLS 1.2 (avoids a TLS 1.3 handshake quirk that Atlas rejects with "internal_error").
-  JAVA_TOOL_OPTIONS: "-Xmx220m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Djdk.tls.client.protocols=TLSv1.2"
+  # Trim each JVM so the services + Mongo fit a 1 GB box (+ swap). SerialGC = lowest-memory collector.
+  JAVA_TOOL_OPTIONS: "-Xmx180m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC"
 
 x-service-defaults: &service-defaults
   restart: unless-stopped
   networks: [cc-net]
-  # tini as PID 1 reaps the health-check child processes (otherwise zombies pile up and
-  # exhaust PIDs/threads on the small box, which also breaks new TLS connections).
-  init: true
+  init: true   # tini reaps health-check child processes (no zombie pile-up)
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    mongo-seed:
+      condition: service_completed_successfully
 
 services:
+  mongodb:
+    image: mongo:8.0
+    restart: unless-stopped
+    networks: [cc-net]
+    command: ["--wiredTigerCacheSizeGB", "0.25"]   # cap Mongo's cache so it fits the small box
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  # One-shot: restore the demo data into `campusconnect` on first boot (skips if already seeded).
+  mongo-seed:
+    image: mongo:8.0
+    networks: [cc-net]
+    restart: "no"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./deploy/seed:/seed:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        COUNT=$$(mongosh --quiet "mongodb://mongodb:27017/campusconnect" --eval "db.users.countDocuments()" 2>/dev/null || echo 0)
+        if [ "$$COUNT" -gt 0 ] 2>/dev/null; then
+          echo "already seeded ($$COUNT users) — skipping"
+        else
+          echo "seeding demo data..."
+          mongorestore --uri="mongodb://mongodb:27017" --gzip --archive=/seed/campusconnect.archive.gz --nsFrom="test.*" --nsTo="campusconnect.*"
+        fi
+
   student-service:
     <<: *service-defaults
     image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER in .env (lowercase ghcr owner)}/campus-connect-student-service:latest
@@ -59,11 +94,14 @@ services:
       STUDENT_SERVICE_URI: http://student-service:8081
       RECRUITER_SERVICE_URI: http://recruiter-service:8082
       ADMIN_SERVICE_URI: http://admin-service:8083
-      JAVA_TOOL_OPTIONS: "-Xmx160m -XX:MaxMetaspaceSize=112m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xmx150m -XX:MaxMetaspaceSize=112m -XX:+UseSerialGC"
     depends_on:
-      - student-service
-      - recruiter-service
-      - admin-service
+      student-service:
+        condition: service_started
+      recruiter-service:
+        condition: service_started
+      admin-service:
+        condition: service_started
 
   frontend:
     image: ghcr.io/${GHCR_OWNER}/campus-connect-frontend:latest
@@ -77,3 +115,6 @@ services:
 networks:
   cc-net:
     driver: bridge
+
+volumes:
+  mongo-data:
