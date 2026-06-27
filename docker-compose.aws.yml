@@ -33,7 +33,7 @@ x-service-defaults: &service-defaults
 
 services:
   mongodb:
-    image: mongo:8.0
+    image: mongo:6.0
     restart: unless-stopped
     networks: [cc-net]
     command: ["--wiredTigerCacheSizeGB", "0.25"]   # cap Mongo's cache so it fits the small box
@@ -48,7 +48,7 @@ services:
 
   # One-shot: restore the demo data into `campusconnect` on first boot (skips if already seeded).
   mongo-seed:
-    image: mongo:8.0
+    image: mongo:6.0
     networks: [cc-net]
     restart: "no"
     depends_on:
