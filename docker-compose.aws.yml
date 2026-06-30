@@ -107,10 +107,28 @@ services:
     image: ghcr.io/${GHCR_OWNER}/campus-connect-frontend:latest
     restart: unless-stopped
     networks: [cc-net]
-    ports:
-      - "80:80"
+    # No host port — Caddy is the public entry now and reaches nginx on the internal network.
     depends_on:
       - api-gateway
+
+  # Caddy: free automatic HTTPS (Let's Encrypt) for ${DOMAIN}, forwarding to the nginx frontend.
+  # Needs ${DOMAIN} pointing at this box + inbound ports 80 AND 443 open in the AWS Security Group.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    networks: [cc-net]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env (your DuckDNS subdomain, e.g. campusconnect.duckdns.org)}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env (any email, for Let's Encrypt)}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # persists the HTTPS certificate across restarts (avoids rate limits)
+      - caddy-config:/config
+    depends_on:
+      - frontend
 
 networks:
   cc-net:
@@ -118,3 +136,5 @@ networks:
 
 volumes:
   mongo-data:
+  caddy-data:
+  caddy-config:
