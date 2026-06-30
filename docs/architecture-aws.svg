@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 860" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 z" fill="#475569"/>
+    </marker>
+    <style>
+      .box { rx:12; ry:12; stroke-width:2; }
+      .t   { font-size:15px; font-weight:700; fill:#0f172a; }
+      .s   { font-size:12px; fill:#475569; }
+      .port{ font-size:11px; fill:#64748b; font-style:italic; }
+      .lbl { font-size:12px; fill:#475569; }
+      .flow{ stroke:#475569; stroke-width:2; fill:none; marker-end:url(#arrow); }
+    </style>
+  </defs>
+
+  <text x="490" y="40" text-anchor="middle" font-size="22" font-weight="800" fill="#1e293b">CampusConnect — How it runs live on AWS</text>
+
+  <!-- Browser -->
+  <rect x="380" y="60" width="220" height="52" class="box" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="490" y="84" text-anchor="middle" class="t">🌐 Your Browser / Phone</text>
+  <text x="490" y="102" text-anchor="middle" class="s">anyone, anywhere</text>
+
+  <!-- browser -> caddy -->
+  <line x1="490" y1="112" x2="490" y2="200" class="flow"/>
+  <text x="505" y="142" class="lbl" font-weight="700" fill="#1d4ed8">🔒 https://shankar-</text>
+  <text x="505" y="160" class="lbl" font-weight="700" fill="#1d4ed8">campusconnect.duckdns.org</text>
+
+  <!-- AWS box -->
+  <rect x="56" y="200" width="868" height="614" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="8 6" stroke-width="2"/>
+  <text x="76" y="226" font-size="14" font-weight="800" fill="#334155">☁️ AWS EC2 server  ·  Ubuntu  ·  1 GB RAM  ·  IP 3.94.103.178</text>
+  <text x="76" y="245" font-size="12" fill="#64748b">everything below runs as Docker containers on this one machine</text>
+
+  <!-- caddy -->
+  <rect x="360" y="262" width="260" height="52" class="box" fill="#fff7ed" stroke="#ea580c"/>
+  <text x="490" y="285" text-anchor="middle" class="t">🔒 Caddy</text>
+  <text x="490" y="303" text-anchor="middle" class="s">free HTTPS (SSL) · ports 80 + 443</text>
+
+  <!-- caddy -> frontend -->
+  <line x1="490" y1="314" x2="490" y2="342" class="flow"/>
+
+  <!-- frontend -->
+  <rect x="360" y="342" width="260" height="58" class="box" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="490" y="366" text-anchor="middle" class="t">frontend  (nginx)</text>
+  <text x="490" y="384" text-anchor="middle" class="s">serves the website · proxies /api</text>
+
+  <!-- frontend -> gateway -->
+  <line x1="490" y1="400" x2="490" y2="404" class="flow"/>
+
+  <!-- gateway -->
+  <rect x="360" y="404" width="260" height="66" class="box" fill="#f5f3ff" stroke="#8b5cf6"/>
+  <text x="490" y="430" text-anchor="middle" class="t">api-gateway</text>
+  <text x="490" y="449" text-anchor="middle" class="s">routes each request to the right service</text>
+  <text x="490" y="464" text-anchor="middle" class="port">port 8080</text>
+
+  <!-- gateway -> services -->
+  <path d="M460,470 C300,510 230,520 215,556" class="flow"/>
+  <line x1="490" y1="470" x2="490" y2="556" class="flow"/>
+  <path d="M520,470 C690,510 752,520 765,556" class="flow"/>
+
+  <!-- student service -->
+  <rect x="95" y="556" width="240" height="74" class="box" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="215" y="582" text-anchor="middle" class="t">🎓 student-service</text>
+  <text x="215" y="601" text-anchor="middle" class="s">student features</text>
+  <text x="215" y="618" text-anchor="middle" class="port">port 8081</text>
+
+  <!-- recruiter service -->
+  <rect x="370" y="556" width="240" height="74" class="box" fill="#ecfdf5" stroke="#059669"/>
+  <text x="490" y="582" text-anchor="middle" class="t">💼 recruiter-service</text>
+  <text x="490" y="601" text-anchor="middle" class="s">recruiter features</text>
+  <text x="490" y="618" text-anchor="middle" class="port">port 8082</text>
+
+  <!-- admin service -->
+  <rect x="645" y="556" width="240" height="74" class="box" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="765" y="582" text-anchor="middle" class="t">🛡️ admin-service</text>
+  <text x="765" y="601" text-anchor="middle" class="s">admin features</text>
+  <text x="765" y="618" text-anchor="middle" class="port">port 8083</text>
+
+  <!-- services -> mongo -->
+  <path d="M215,630 C230,690 360,700 430,712" class="flow"/>
+  <line x1="490" y1="630" x2="490" y2="700" class="flow"/>
+  <path d="M765,630 C752,690 620,700 550,712" class="flow"/>
+
+  <!-- mongodb -->
+  <rect x="360" y="712" width="260" height="68" class="box" fill="#e7f5ef" stroke="#00684A"/>
+  <text x="490" y="739" text-anchor="middle" class="t" fill="#00684A">🍃 MongoDB 6</text>
+  <text x="490" y="758" text-anchor="middle" class="s">the database — stores all the data</text>
+  <text x="490" y="773" text-anchor="middle" class="port">port 27017</text>
+
+  <!-- legend -->
+  <text x="76" y="800" font-size="11" fill="#94a3b8">Requests flow top → bottom. The 3 services read/write the same database. All 6 boxes are Docker containers.</text>
+</svg>
