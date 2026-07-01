@@ -130,6 +130,7 @@ All of these run as **Docker containers** on the one AWS server.
 
 ### Current limitations (fine for a demo)
 - **Résumé upload & offer-PDF download don't work** (file storage was left out to save memory).
+- **Verification emails land in Mailpit** (`:8025`), not real inboxes — switch to Brevo (Part 6) for real delivery.
 - A bit **slow** on the 1 GB box.
 
 ---
@@ -138,6 +139,52 @@ All of these run as **Docker containers** on the one AWS server.
 
 1. **Move to Oracle's free 24 GB server later** (if you get a Visa/Mastercard) → full features (file storage, monitoring), much faster — the deploy for it is already built (`docker-compose.prod.yml`).
 2. **Re-enable file storage** (MinIO) so résumé upload / offer-PDF work — needs more memory than the 1 GB box has, so best paired with #1.
+
+---
+
+## Update — 1 July 2026: Real email verification + polish
+
+After the site was live, we fixed the things that broke or looked wrong for real users:
+
+### 1. "Could not send the verification email" on sign-up (the big one)
+Creating an account failed with `EMAIL_SEND_FAILED`. **Why:** registration tries to send a verification email, but the AWS box had **no mail server**, so the send threw and the new account was rolled back.
+
+**Fix — the real email flow now runs in production:**
+- Added a tiny **Mailpit** container to the box — a mail "catcher" (SMTP on `:1025`, web page on `:8025`).
+- Registration now sends the verification email to Mailpit, and the emailed link points at the **live site's** `/verify-email` page (not `localhost`).
+- **Flow:** register → open Mailpit at `http://<box-ip>:8025` → click the verification link → "Email verified" → sign in. ✅
+- *(Mailpit shows the email in its own web page — it does not deliver to a real Gmail inbox. See Part 6 to switch to real delivery.)*
+- There's also an `AUTO_VERIFY=true` switch (in the compose env) that skips email entirely and activates accounts instantly — handy if you ever want the simplest possible demo with no mail at all.
+
+### 2. Sign-up success message was misleading
+The screen always said *"we sent a verification link"* even when no email was involved. It now reads from the real result: **account active → "sign in now"**, recruiter → **"waiting for admin approval"**, otherwise the verification prompt.
+
+### 3. Login boxes still showed the old email/password after logout
+That was the **browser's password manager** auto-filling the saved credentials. Told the browser not to auto-fill the login form (`autocomplete=off` / `new-password`), so it now starts **empty** after logout.
+
+---
+
+## Part 6 — How to switch to REAL email delivery (Brevo)
+
+Mailpit is great for demoing, but the email never reaches a real inbox. To deliver real emails (e.g. to a recruiter's Gmail), use **Brevo** — a free email service (300/day, **no credit card**). The app is already wired for it; it's a **`.env`-only change, no rebuild**:
+
+1. Sign up free at **brevo.com** → go to **SMTP & API → SMTP** → copy your **login** and **SMTP key**.
+2. On the AWS box, edit `.env` and add:
+   ```
+   MAIL_HOST=smtp-relay.brevo.com
+   MAIL_PORT=587
+   MAIL_USERNAME=<your-brevo-login>
+   MAIL_PASSWORD=<your-brevo-smtp-key>
+   MAIL_SMTP_AUTH=true
+   MAIL_SMTP_STARTTLS=true
+   ```
+3. Restart the services:
+   ```
+   sudo docker compose -f docker-compose.aws.yml up -d student-service recruiter-service admin-service
+   ```
+4. Register with a real email → the verification link now arrives in that **real inbox** (check spam the first time).
+
+To go back to Mailpit, just remove those `MAIL_*` lines from `.env` and restart.
 
 ---
 
@@ -151,3 +198,11 @@ All of these run as **Docker containers** on the one AWS server.
 - `.github/workflows/ci.yml` — now builds Intel (amd64) images + the front-end image
 - `admin-service/.../reports/ReportService.java` — the CSV joining-date fix
 - `docs/architecture-aws.svg` / `.png` — the architecture diagram
+
+**1 July 2026 — email + fixes:**
+- `docker-compose.aws.yml` — added the Mailpit container, `AUTO_VERIFY`, and `.env`-overridable `MAIL_*` (Brevo-ready)
+- `*/src/main/resources/application.yml` (student/recruiter/admin) — SMTP username/password + auth/starttls support
+- `student-service/.../StudentRegistrationService.java`, `recruiter-service/.../RecruiterRegistrationService.java` — the `AUTO_VERIFY` path
+- `frontend/.../auth/register/register.ts` — status-aware success message
+- `frontend/.../auth/login/login.ts` — no browser auto-fill after logout
+- `.env.aws.example` — documented the Brevo `MAIL_*` options

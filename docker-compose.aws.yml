@@ -17,10 +17,15 @@ x-service-env: &service-env
   MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
   # Real email-verification flow: registration sends the email to the on-box Mailpit (below), which
   # captures it for viewing at http://<box>:8025. AUTO_VERIFY off so the verification link is required.
-  # To deliver to real inboxes instead, point MAIL_* at Brevo (smtp-relay.brevo.com:587, auth+starttls true).
+  # To deliver to REAL inboxes instead, set the MAIL_* values in .env (Brevo: smtp-relay.brevo.com,
+  # port 587, MAIL_USERNAME/PASSWORD, MAIL_SMTP_AUTH=true, MAIL_SMTP_STARTTLS=true) — no code change.
   AUTO_VERIFY: "false"
-  MAIL_HOST: mailpit
-  MAIL_PORT: "1025"
+  MAIL_HOST: ${MAIL_HOST:-mailpit}
+  MAIL_PORT: ${MAIL_PORT:-1025}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+  MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
   # Plain HTTP (no TLS yet) → the refresh cookie must NOT be Secure or the browser drops it.
   APP_AUTH_COOKIE_SECURE: "false"
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
