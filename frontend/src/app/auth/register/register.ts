@@ -12,8 +12,10 @@ import { describeControlError } from '../field-errors';
 
 /**
  * Register screen (Story 9.3) — student or recruiter self-registration (Admin excluded: admins are
- * bootstrapped). Recruiter adds company fields. On success the form is replaced by a portal-correct
- * "check your email" coaching panel. Errors map to plain language (UX-DR12).
+ * bootstrapped). Recruiter adds company fields. On success the form is replaced by a coaching panel
+ * keyed on the returned accountStatus: ACTIVE (auto-verified) → "sign in now", PENDING_APPROVAL →
+ * "awaiting admin", otherwise the "check your email" verification prompt. Errors map to plain
+ * language (UX-DR12).
  */
 @Component({
   selector: 'app-register',
@@ -23,11 +25,22 @@ import { describeControlError } from '../field-errors';
     <app-auth-layout title="Create your account" subtitle="Join your college on CampusConnect.">
       @if (done()) {
         <div class="done" aria-live="polite">
-          <p class="cc-body">We sent a verification link to <strong>{{ done()!.email }}</strong>.</p>
-          @if (done()!.portal === 'recruiter') {
-            <p class="cc-body">Verify it, then your account waits for College Admin approval.</p>
+          @if (done()!.accountStatus === 'ACTIVE') {
+            <p class="cc-body"><strong>Account created!</strong> Your account is ready to use.</p>
+            <p class="cc-body">
+              <a [routerLink]="['/login']" [queryParams]="{ portal: done()!.portal }">Sign in now</a>
+              with your email and password.
+            </p>
+          } @else if (done()!.accountStatus === 'PENDING_APPROVAL') {
+            <p class="cc-body"><strong>Account created!</strong> It's now waiting for College Admin approval.</p>
+            <p class="cc-body">You'll be able to sign in once an admin approves your account.</p>
           } @else {
-            <p class="cc-body">Verify it, then sign in.</p>
+            <p class="cc-body">We sent a verification link to <strong>{{ done()!.email }}</strong>.</p>
+            @if (done()!.portal === 'recruiter') {
+              <p class="cc-body">Verify it, then your account waits for College Admin approval.</p>
+            } @else {
+              <p class="cc-body">Verify it, then sign in.</p>
+            }
           }
         </div>
       } @else {
@@ -110,7 +123,7 @@ export class Register {
   readonly portal = signal<Portal>('student');
   readonly submitting = signal(false);
   readonly formError = signal<string | null>(null);
-  readonly done = signal<{ email: string; portal: Portal } | null>(null);
+  readonly done = signal<{ email: string; portal: Portal; accountStatus: string } | null>(null);
   private readonly serverFields = signal<Record<string, string>>({});
   private readonly submitted = signal(false);
 
@@ -192,8 +205,12 @@ export class Register {
 
     this.submitting.set(true);
     try {
-      await this.auth.register(this.portal(), this.buildBody());
-      this.done.set({ email: this.form.getRawValue().email, portal: this.portal() });
+      const res = await this.auth.register(this.portal(), this.buildBody());
+      this.done.set({
+        email: this.form.getRawValue().email,
+        portal: this.portal(),
+        accountStatus: res.accountStatus,
+      });
     } catch (e) {
       const view = toAuthErrorView(e);
       this.formError.set(view.formMessage);

@@ -46,6 +46,23 @@ describe('Register', () => {
     expect(fixture.nativeElement.textContent).toContain('sign in');
   });
 
+  it('shows the "sign in now" panel when the account is auto-verified (ACTIVE)', async () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance;
+    cmp.form.patchValue({ collegeCode: 'iitb', email: 's@b.com', password: 'secret12', confirmPassword: 'secret12' });
+    cmp.submit();
+
+    const req = mock.expectOne('/api/student/auth/register');
+    req.flush({ email: 's@b.com', accountStatus: 'ACTIVE' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Account created!');
+    expect(text).toContain('Sign in now');
+    expect(text).not.toContain('verification link'); // no misleading "check your email" copy
+  });
+
   it('sends recruiter company fields and shows approval copy', async () => {
     const fixture = setup();
     const cmp = fixture.componentInstance;
