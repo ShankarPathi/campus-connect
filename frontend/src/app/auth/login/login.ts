@@ -21,7 +21,7 @@ import { describeControlError } from '../field-errors';
   imports: [ReactiveFormsModule, RouterLink, AuthLayout, PortalToggle, Button, TextField],
   template: `
     <app-auth-layout title="Sign in" subtitle="Welcome back to CampusConnect." [portal]="portal()">
-      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate autocomplete="off">
         <app-portal-toggle [(value)]="portal" />
 
         @if (formError()) {
@@ -31,7 +31,7 @@ import { describeControlError } from '../field-errors';
         <app-text-field
           label="College code"
           formControlName="collegeCode"
-          autocomplete="organization"
+          autocomplete="off"
           [required]="true"
           [error]="err('collegeCode', 'College code')"
         />
@@ -39,7 +39,7 @@ import { describeControlError } from '../field-errors';
           label="Email"
           type="email"
           formControlName="email"
-          autocomplete="username"
+          autocomplete="off"
           [required]="true"
           [error]="err('email', 'Email')"
         />
@@ -47,7 +47,7 @@ import { describeControlError } from '../field-errors';
           label="Password"
           type="password"
           formControlName="password"
-          autocomplete="current-password"
+          autocomplete="new-password"
           [required]="true"
           [error]="err('password', 'Password')"
         />
