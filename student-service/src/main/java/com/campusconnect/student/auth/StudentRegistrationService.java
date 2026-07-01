@@ -39,6 +39,7 @@ public class StudentRegistrationService {
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
     private final String verificationBaseUrl;
+    private final boolean autoVerify;
 
     public StudentRegistrationService(
             TenantRepository tenantRepository,
@@ -46,13 +47,15 @@ public class StudentRegistrationService {
             PasswordEncoder passwordEncoder,
             EmailVerificationService emailVerificationService,
             EmailService emailService,
-            @Value("${app.verification.base-url}") String verificationBaseUrl) {
+            @Value("${app.verification.base-url}") String verificationBaseUrl,
+            @Value("${app.registration.auto-verify:false}") boolean autoVerify) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailVerificationService = emailVerificationService;
         this.emailService = emailService;
         this.verificationBaseUrl = verificationBaseUrl;
+        this.autoVerify = autoVerify;
     }
 
     /**
@@ -80,6 +83,15 @@ public class StudentRegistrationService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(Role.STUDENT);
+
+        // Demo/no-mail deployments (app.registration.auto-verify=true): skip the verification email
+        // entirely and activate the account immediately, so "register → log in" works with no SMTP
+        // server. Default is false, preserving the real email-verification flow everywhere else.
+        if (autoVerify) {
+            user.setAccountStatus(AccountStatus.ACTIVE);
+            return StudentRegistrationResponse.from(userRepository.save(user));
+        }
+
         user.setAccountStatus(AccountStatus.PENDING_VERIFICATION);
         User saved = userRepository.save(user);
         String token = emailVerificationService.issueToken(saved.getId(), tenant.getId());

@@ -27,6 +27,10 @@ app:
   verification:
     base-url: ${VERIFY_BASE_URL:http://localhost:8081/api/student/auth/verify-email}
     token-ttl: ${VERIFY_TOKEN_TTL:PT24H}
+  # Auto-verify (demo/no-mail deploys): when true, registration skips the verification email and
+  # activates the account immediately. Default false → the real email-verification flow is unchanged.
+  registration:
+    auto-verify: ${AUTO_VERIFY:false}
   # Auth abuse throttling (Story 2.5, NFR-2): in-memory per-instance fixed-window limits.
   ratelimit:
     login:

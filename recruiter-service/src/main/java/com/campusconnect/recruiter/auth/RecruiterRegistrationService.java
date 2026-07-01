@@ -41,6 +41,7 @@ public class RecruiterRegistrationService {
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
     private final String verificationBaseUrl;
+    private final boolean autoVerify;
 
     public RecruiterRegistrationService(
             TenantRepository tenantRepository,
@@ -49,7 +50,8 @@ public class RecruiterRegistrationService {
             PasswordEncoder passwordEncoder,
             EmailVerificationService emailVerificationService,
             EmailService emailService,
-            @Value("${app.verification.base-url}") String verificationBaseUrl) {
+            @Value("${app.verification.base-url}") String verificationBaseUrl,
+            @Value("${app.registration.auto-verify:false}") boolean autoVerify) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.recruiterProfileRepository = recruiterProfileRepository;
@@ -57,6 +59,7 @@ public class RecruiterRegistrationService {
         this.emailVerificationService = emailVerificationService;
         this.emailService = emailService;
         this.verificationBaseUrl = verificationBaseUrl;
+        this.autoVerify = autoVerify;
     }
 
     /**
@@ -99,6 +102,15 @@ public class RecruiterRegistrationService {
             profile.setRecruiterDesignation(request.recruiterDesignation());
             profile.setContactPhone(request.contactPhone());
             recruiterProfileRepository.save(profile);
+
+            // Demo/no-mail deployments (app.registration.auto-verify=true): skip the verification email
+            // and move the recruiter straight to PENDING_APPROVAL (the normal post-verify state), so a
+            // College Admin can approve them without any SMTP server. Default false keeps the real flow.
+            if (autoVerify) {
+                saved.setAccountStatus(AccountStatus.PENDING_APPROVAL);
+                userRepository.save(saved);
+                return RecruiterRegistrationResponse.from(saved);
+            }
 
             String token = emailVerificationService.issueToken(saved.getId(), tenant.getId());
             emailService.sendVerificationEmail(email, buildVerificationLink(token));

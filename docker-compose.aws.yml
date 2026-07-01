@@ -15,6 +15,9 @@ x-service-env: &service-env
   # Mongo runs on the box (service name "mongodb"), plaintext — no TLS to fail.
   SPRING_MONGODB_URI: mongodb://mongodb:27017/campusconnect
   MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+  # No SMTP server on this box → registration would fail with EMAIL_SEND_FAILED. Auto-verify skips
+  # the verification email and activates accounts immediately (students ACTIVE, recruiters PENDING_APPROVAL).
+  AUTO_VERIFY: "true"
   # Plain HTTP (no TLS yet) → the refresh cookie must NOT be Secure or the browser drops it.
   APP_AUTH_COOKIE_SECURE: "false"
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
