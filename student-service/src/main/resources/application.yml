@@ -11,10 +11,19 @@ spring:
     mongodb:
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
-  # Email (Story 2.1): dev target is Mailpit (localhost:1025, no auth). Brevo SMTP is wired in Epic 10.
+  # Email (Story 2.1): dev target is Mailpit (localhost:1025, no auth). For a real authenticated relay
+  # (e.g. Brevo) set MAIL_USERNAME/MAIL_PASSWORD + MAIL_SMTP_AUTH=true + MAIL_SMTP_STARTTLS=true.
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
   # Resume upload (Story 3.2): servlet hard ceiling, set ABOVE app.resume.max-size-bytes so the
   # service-level check yields a clean RESUME_TOO_LARGE; a file past this ceiling is also mapped to it.
   servlet:

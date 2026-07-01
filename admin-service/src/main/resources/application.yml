@@ -12,9 +12,18 @@ spring:
       # Build @Indexed indexes (e.g. the unique tenants.slug) lazily on first entity use.
       auto-index-creation: true
   # Email (Story 2.2): activates SmtpEmailService so approval/rejection notices are sent (Mailpit in dev).
+  # For a real authenticated relay (e.g. Brevo) set MAIL_USERNAME/MAIL_PASSWORD + MAIL_SMTP_AUTH/STARTTLS=true.
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
 
 # Auth abuse throttling (Story 2.5, NFR-2): in-memory per-instance fixed-window limits.
 app:

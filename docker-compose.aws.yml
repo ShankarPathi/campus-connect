@@ -15,9 +15,12 @@ x-service-env: &service-env
   # Mongo runs on the box (service name "mongodb"), plaintext — no TLS to fail.
   SPRING_MONGODB_URI: mongodb://mongodb:27017/campusconnect
   MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
-  # No SMTP server on this box → registration would fail with EMAIL_SEND_FAILED. Auto-verify skips
-  # the verification email and activates accounts immediately (students ACTIVE, recruiters PENDING_APPROVAL).
-  AUTO_VERIFY: "true"
+  # Real email-verification flow: registration sends the email to the on-box Mailpit (below), which
+  # captures it for viewing at http://<box>:8025. AUTO_VERIFY off so the verification link is required.
+  # To deliver to real inboxes instead, point MAIL_* at Brevo (smtp-relay.brevo.com:587, auth+starttls true).
+  AUTO_VERIFY: "false"
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
   # Plain HTTP (no TLS yet) → the refresh cookie must NOT be Secure or the browser drops it.
   APP_AUTH_COOKIE_SECURE: "false"
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
@@ -71,17 +74,32 @@ services:
           mongorestore --uri="mongodb://mongodb:27017" --gzip --archive=/seed/campusconnect.archive.gz --nsFrom="test.*" --nsTo="campusconnect.*"
         fi
 
+  # Mailpit: on-box SMTP sink (:1025) + web UI (:8025). Registration emails land here so the real
+  # verification flow works without an external mail provider. View + click the link at http://<box>:8025.
+  # Needs inbound port 8025 open in the AWS Security Group to reach the web UI from your browser.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    networks: [cc-net]
+    ports:
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: "500"
+
   student-service:
     <<: *service-defaults
     image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER in .env (lowercase ghcr owner)}/campus-connect-student-service:latest
     environment:
       <<: *service-env
+      # The emailed link opens the live frontend verify page (which calls the API), not raw localhost.
+      VERIFY_BASE_URL: ${PUBLIC_BASE_URL:-https://shankar-campusconnect.duckdns.org}/verify-email?portal=student
 
   recruiter-service:
     <<: *service-defaults
     image: ghcr.io/${GHCR_OWNER}/campus-connect-recruiter-service:latest
     environment:
       <<: *service-env
+      VERIFY_BASE_URL: ${PUBLIC_BASE_URL:-https://shankar-campusconnect.duckdns.org}/verify-email?portal=recruiter
 
   admin-service:
     <<: *service-defaults
