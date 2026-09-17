@@ -28,7 +28,7 @@ import java.util.List;
 public abstract class AbstractMongoIT {
 
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
 
     protected static MongoTemplate mongoTemplate;
     private static MongoMappingContext mappingContext;

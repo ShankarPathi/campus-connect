@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 class NotificationPublisherTest {
 
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {

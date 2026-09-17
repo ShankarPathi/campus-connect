@@ -47,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ResumeUploadTest {
 
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
     @Container
     static final MinIOContainer MINIO = new MinIOContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z");
 

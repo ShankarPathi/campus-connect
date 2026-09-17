@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OfferExpiryJobTest {
 
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {

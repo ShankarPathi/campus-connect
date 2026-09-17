@@ -13,12 +13,12 @@
 
 services:
   mongodb:
-    image: mongo:8.0
+    image: mongo:7.0
     container_name: cc-mongodb
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
+      - mongo-data-v7:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -56,5 +56,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  mongo-data:
+  mongo-data-v7:
   minio-data:

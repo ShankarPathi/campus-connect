@@ -97,14 +97,14 @@ services:
     environment:
       <<: *service-env
       # The emailed link opens the live frontend verify page (which calls the API), not raw localhost.
-      VERIFY_BASE_URL: ${PUBLIC_BASE_URL:-https://shankar-campusconnect.duckdns.org}/verify-email?portal=student
+      VERIFY_BASE_URL: https://${DOMAIN}/verify-email?portal=student
 
   recruiter-service:
     <<: *service-defaults
     image: ghcr.io/${GHCR_OWNER}/campus-connect-recruiter-service:latest
     environment:
       <<: *service-env
-      VERIFY_BASE_URL: ${PUBLIC_BASE_URL:-https://shankar-campusconnect.duckdns.org}/verify-email?portal=recruiter
+      VERIFY_BASE_URL: https://${DOMAIN}/verify-email?portal=recruiter
 
   admin-service:
     <<: *service-defaults

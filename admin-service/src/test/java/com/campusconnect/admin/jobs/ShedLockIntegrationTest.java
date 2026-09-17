@@ -34,7 +34,7 @@ import static org.mockito.Mockito.verify;
 class ShedLockIntegrationTest {
 
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {

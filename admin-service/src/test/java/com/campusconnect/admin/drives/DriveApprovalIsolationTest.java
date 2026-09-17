@@ -50,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DriveApprovalIsolationTest {
 
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
 
     @DynamicPropertySource
     static void mongoProperties(DynamicPropertyRegistry registry) {
